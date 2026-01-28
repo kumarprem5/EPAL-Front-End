@@ -1,0 +1,149 @@
+<app-sample-header></app-sample-header>
+
+<div class="dashboard">
+  
+  <div class="sample-registration-container">
+    <div class="form-card">
+      <h2 class="form-title">Register New Sample</h2>
+      
+      <div *ngIf="submitSuccess" class="alert alert-success">
+        Sample registered successfully!
+      </div>
+      
+      <div *ngIf="submitError" class="alert alert-error">
+        {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="sampleForm" (ngSubmit)="onSubmit()">
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="projectName">Project Name <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="projectName" 
+              formControlName="projectName"
+              [class.invalid]="isFieldInvalid('projectName')"
+              placeholder="Enter project name">
+            <span class="error-message" *ngIf="isFieldInvalid('projectName')">
+              Project name is required
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="address">Address <span class="required">*</span></label>
+            <textarea 
+              id="address" 
+              formControlName="address"
+              [class.invalid]="isFieldInvalid('address')"
+              placeholder="Enter address"
+              rows="2"></textarea>
+            <span class="error-message" *ngIf="isFieldInvalid('address')">
+              Address is required
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="sampleDescription">Sample Description <span class="required">*</span></label>
+            <textarea 
+              id="sampleDescription" 
+              formControlName="sampleDescription"
+              [class.invalid]="isFieldInvalid('sampleDescription')"
+              placeholder="Enter sample description"
+              rows="3"></textarea>
+            <span class="error-message" *ngIf="isFieldInvalid('sampleDescription')">
+              Sample description is required
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="samplingAndAnalysisProtocol">Sampling & Analysis Protocol</label>
+            <input 
+              type="text" 
+              id="samplingAndAnalysisProtocol" 
+              formControlName="samplingAndAnalysisProtocol"
+              placeholder="Enter sampling and analysis protocol">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="formatNumber">Format Number</label>
+            <input 
+              type="text" 
+              id="formatNumber" 
+              formControlName="formatNumber"
+              placeholder="Enter format number">
+          </div>
+
+          <div class="form-group">
+            <label for="partyReferenceNumber">Party Reference Number</label>
+            <input 
+              type="text" 
+              id="partyReferenceNumber" 
+              formControlName="partyReferenceNumber"
+              placeholder="Enter party reference number">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reportingDate">Reporting Date <span class="required">*</span></label>
+            <input 
+              type="date" 
+              id="reportingDate" 
+              formControlName="reportingDate"
+              [class.invalid]="isFieldInvalid('reportingDate')">
+            <span class="error-message" *ngIf="isFieldInvalid('reportingDate')">
+              Reporting date is required
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="dateOfReceiving">Date of Receiving <span class="required">*</span></label>
+            <input 
+              type="date" 
+              id="dateOfReceiving" 
+              formControlName="dateOfReceiving"
+              [class.invalid]="isFieldInvalid('dateOfReceiving')">
+            <span class="error-message" *ngIf="isFieldInvalid('dateOfReceiving')">
+              Date of receiving is required
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="periodOfAnalysis">Period of Analysis</label>
+            <input 
+              type="text" 
+              id="periodOfAnalysis" 
+              formControlName="periodOfAnalysis"
+              placeholder="Enter period of analysis">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            (click)="onReset()"
+            [disabled]="isSubmitting">
+            Reset
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary" 
+            [disabled]="isSubmitting">
+            <span *ngIf="!isSubmitting">Register Sample</span>
+            <span *ngIf="isSubmitting">Registering...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

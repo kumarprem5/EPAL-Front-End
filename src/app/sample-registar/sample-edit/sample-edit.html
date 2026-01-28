@@ -1,0 +1,74 @@
+<app-sample-header></app-sample-header>
+
+<div class="edit-container">
+  <h2>✏️ Edit Sample</h2>
+
+  <form (ngSubmit)="updateSample()">
+
+    <div class="form-group">
+      <label>Sample Number</label>
+      <input type="text" [(ngModel)]="sampleForm.sampleNumber" name="sampleNumber" required />
+    </div>
+
+    <div class="form-group">
+      <label>Project Name</label>
+      <input type="text" [(ngModel)]="sampleForm.projectName" name="projectName" />
+    </div>
+
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" [(ngModel)]="sampleForm.address" name="address" />
+    </div>
+
+    <div class="form-group">
+      <label>Sample Description</label>
+      <textarea [(ngModel)]="sampleForm.sampleDescription" name="sampleDescription"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Sampling & Analysis Protocol</label>
+      <input type="text" [(ngModel)]="sampleForm.samplingAndAnalysisProtocol" name="samplingAndAnalysisProtocol" />
+    </div>
+
+    <div class="form-group">
+      <label>Report Number</label>
+      <input type="text" [(ngModel)]="sampleForm.reportNumber" name="reportNumber" />
+    </div>
+
+    <div class="form-group">
+      <label>Format Number</label>
+      <input type="text" [(ngModel)]="sampleForm.formatNumber" name="formatNumber" />
+    </div>
+
+    <div class="form-group">
+      <label>Party Reference Number</label>
+      <input type="text" [(ngModel)]="sampleForm.partyReferenceNumber" name="partyReferenceNumber" />
+    </div>
+
+    <div class="form-group">
+      <label>Reporting Date</label>
+      <input type="date" [(ngModel)]="sampleForm.reportingDate" name="reportingDate" />
+    </div>
+
+    <div class="form-group">
+      <label>Period Of Analysis</label>
+      <input type="text" [(ngModel)]="sampleForm.periodOfAnalysis" name="periodOfAnalysis" />
+    </div>
+
+    <div class="form-group">
+      <label>Date Of Receiving</label>
+      <input type="date" [(ngModel)]="sampleForm.dateOfReceiving" name="dateOfReceiving" />
+    </div>
+
+    <div class="btn-group">
+      <button type="submit" [disabled]="loading">
+        💾 Update
+      </button>
+
+      <button type="button" (click)="cancel()">
+        ❌ Cancel
+      </button>
+    </div>
+
+  </form>
+</div>

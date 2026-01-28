@@ -1,0 +1,134 @@
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+
+export interface SampleFilterRequest {
+  page: number;
+  size: number;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface Sample {
+  id: number;
+  address: string | null;
+  createdAt: string;
+  dateOfReceiving: string;
+  formatNumber: string | null;
+  partyReferenceNumber: string;
+  periodOfAnalysis: string;
+  projectName: string | null;
+  qualityChecked: boolean;
+  reportNumber: string;
+  reportingDate: string;
+  sampleDescription: string;
+  sampleNumber: string;
+  samplingAndAnalysisProtocol: string;
+  techanicianChecked: boolean;
+  updatedAt: string;
+  urlNo: string | null;
+}
+
+export interface PageResponse {
+  empty: boolean;
+  first: boolean;
+  last: boolean;
+  number: number;
+  numberOfElements: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  content: Sample[];
+}
+
+export interface ApiResponse<T> {
+  code: string;
+  data: T;
+  message: string;
+  status: 'SUCCESS' | 'ERROR';
+}
+
+
+@Injectable({
+  providedIn: 'root',
+})
+export class SampleService {
+
+  private baseUrl = 'http://localhost:8080/api/collector/samples';
+
+  constructor(private http: HttpClient) {}
+
+  private getHeaders(): { headers: HttpHeaders } {
+    const token = localStorage.getItem('token') || '';
+    return {
+      headers: new HttpHeaders({
+        'token': token,
+        'Content-Type': 'application/json'
+      })
+    };
+  }
+
+  getAllSamples(filter: SampleFilterRequest): Observable<ApiResponse<PageResponse>> {
+    console.log('Fetching samples with filter:', filter);
+    return this.http.post<ApiResponse<PageResponse>>(
+      `${this.baseUrl}/get/all`,
+      filter,
+      this.getHeaders()
+    );
+  }
+
+  addSample(data: Partial<Sample>): Observable<ApiResponse<Sample>> {
+    return this.http.post<ApiResponse<Sample>>(
+      `${this.baseUrl}/add`,
+      data,
+      this.getHeaders()
+    );
+  }
+
+updateSample(id: number, data: Partial<Sample>): Observable<ApiResponse<Sample>> {
+  return this.http.put<ApiResponse<Sample>>(
+    `${this.baseUrl}/update`, 
+    data, 
+    {
+      headers: this.getHeaders().headers,
+      params: { id: id.toString() }  // Ensure the ID is passed as a query parameter
+    }
+  );
+}
+
+
+
+getById(id: number): Observable<ApiResponse<Sample>> {
+  return this.http.post<ApiResponse<Sample>>(
+    `${this.baseUrl}/get/id`,
+    { id: id }, // Send the id in the request body
+    { headers: this.getHeaders().headers }
+  );
+}
+
+
+
+  getByReportNumber(reportNumber: string): Observable<ApiResponse<Sample>> {
+    return this.http.post<ApiResponse<Sample>>(
+      `${this.baseUrl}/get/by-report-number`,
+      { reportNumber },
+      this.getHeaders()
+    );
+  }
+
+  technicianCheck(reportNumber: string): Observable<ApiResponse<Sample>> {
+    return this.http.post<ApiResponse<Sample>>(
+      `${this.baseUrl}/technician-check`,
+      { reportNumber },
+      this.getHeaders()
+    );
+  }
+
+  qualityCheck(reportNumber: string): Observable<ApiResponse<Sample>> {
+    return this.http.post<ApiResponse<Sample>>(
+      `${this.baseUrl}/quality-check`,
+      { reportNumber },
+      this.getHeaders()
+    );
+  }
+}

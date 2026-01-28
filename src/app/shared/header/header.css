@@ -1,0 +1,57 @@
+.app-header {
+  height: 64px;
+  background-color: #215E61;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Logo + Company */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  height: 40px;
+  width: 40px;
+}
+
+.company-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.help {
+  background-color: #FFFFFF;
+  color: #215E61;
+}
+
+.support {
+  background-color: #215E61;
+  color: #FFFFFF;
+}
+
+.btn:hover {
+  opacity: 0.85;
+}

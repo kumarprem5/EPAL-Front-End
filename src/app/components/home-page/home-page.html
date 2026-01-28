@@ -1,0 +1,45 @@
+<app-header></app-header>
+
+<section class="home-container">
+  <h1 class="title">Laboratory Management System</h1>
+  <p class="subtitle">
+    Secure, efficient, and role-based access for laboratory operations
+  </p>
+
+  <!-- Cards Grid -->
+  <div class="card-grid">
+
+    <!-- Sample Register -->
+    <div class="role-card">
+      <div class="icon">🧾</div>
+      <h3>Sample Register</h3>
+      <p>Register and track incoming lab samples efficiently.</p>
+      <button (click)="goToSampleLogin()">Login</button>
+    </div>
+
+    <!-- Analyst -->
+    <div class="role-card">
+      <div class="icon">🔬</div>
+      <h3>Analyst</h3>
+      <p>Perform testing, analysis, and result validation.</p>
+      <button>Login</button>
+    </div>
+
+    <!-- Technician -->
+    <div class="role-card">
+      <div class="icon">⚙️</div>
+      <h3>Technician</h3>
+      <p>Handle instruments, preparation, and sample processing.</p>
+      <button>Login</button>
+    </div>
+
+    <!-- Quality Officer -->
+    <div class="role-card">
+      <div class="icon">✅</div>
+      <h3>Quality Officer</h3>
+      <p>Ensure compliance, audit results, and approvals.</p>
+      <button>Login</button>
+    </div>
+
+  </div>
+</section>

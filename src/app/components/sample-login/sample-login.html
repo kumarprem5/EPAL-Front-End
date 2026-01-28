@@ -1,0 +1,35 @@
+<app-header></app-header>
+
+<div class="login-container">
+  <h2>Sample Register Login</h2>
+
+  <form (ngSubmit)="login()" novalidate>
+    <div class="input-group">
+      <input
+        type="text"
+        placeholder="Username"
+        [(ngModel)]="loginData.emailId"
+        name="username"
+        required
+      />
+    </div>
+
+    <div class="input-group">
+      <input
+        type="password"
+        placeholder="Password"
+        [(ngModel)]="loginData.password"
+        name="password"
+        required
+      />
+    </div>
+
+    <button type="submit">Login</button>
+
+    <p *ngIf="errorMsg" class="error">{{ errorMsg }}</p>
+  </form>
+</div>
+
+<footer class="footer">
+  <p>&copy; 2026 EPAL LAB. All rights reserved.</p>
+</footer>

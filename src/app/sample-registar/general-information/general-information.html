@@ -1,0 +1,55 @@
+<app-sample-header></app-sample-header>
+
+<!-- =========================
+     SAMPLE HEADER DETAILS
+========================= -->
+<div class="sample-header-card compact" *ngIf="sample">
+
+   <h3>Project Details</h3> 
+
+  <div class="header-grid">
+    <div class="field"><span>Sample No</span>{{ sample.sampleNumber }}</div>
+    <div class="field highlight"><span>Date of Receiving</span>{{ sample.dateOfReceiving | date:'dd MMM yyyy' }}</div>
+    <div class="field"><span>Report No</span>{{ sample.reportNumber }}</div>
+    <div class="field"><span>Format No</span>{{ sample.formatNumber }}</div>
+    <div class="field full"><span>Project Name</span>{{ sample.projectName }}</div>
+    <div class="field full"><span>Address</span>{{ sample.address }}</div>
+    <div class="field full"><span>Sample Description</span>{{ sample.sampleDescription }}</div>
+  </div>
+</div>
+
+<h3 class="sample-description">{{ sample.sampleDescription }}</h3>
+
+
+
+<!-- =========================
+     GENERAL INFORMATION
+========================= -->
+<div class="general-info">
+  <h3>General Information</h3>
+
+  <!-- Add Form -->
+  <div class="add-form">
+    <input type="text" placeholder="Parameter Name" [(ngModel)]="newInfo.name" />
+    <input type="text" placeholder="Value" [(ngModel)]="newInfo.value" />
+    <button (click)="addInformation()">➕ Add</button>
+  </div>
+
+  <!-- List Table -->
+  <table class="info-table" *ngIf="informations.length > 0">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Value</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let info of informations">
+        <td><input [(ngModel)]="info.name" /></td>
+        <td><input [(ngModel)]="info.value" /></td>
+        <td><button (click)="updateInformation(info)">💾 Save</button></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
