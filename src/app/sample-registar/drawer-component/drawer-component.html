@@ -1,0 +1,16 @@
+<button class="toggle-btn" (click)="toggleDrawer()">☰ Toggle sidebar</button>
+
+<div class="drawer" [class.open]="isOpen">
+  <div class="drawer-overlay" (click)="closeDrawer()" *ngIf="isOpen"></div>
+  <nav class="drawer-menu">
+    <div
+      class="menu-item"
+      *ngFor="let item of menuItems"
+      [class.active]="item.active"
+      (click)="onMenuItemClick(item)"
+    >
+      <span class="icon">{{ item.icon }}</span>
+      <span>{{ item.label }}</span>
+    </div>
+  </nav>
+</div>

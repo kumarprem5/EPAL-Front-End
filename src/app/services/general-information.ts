@@ -17,8 +17,7 @@ export interface ApiResponse<T> {
 })
 export class GeneralInformationservice{
 
- private baseUrl = 'http://localhost:8080/api/collector/samples/general-information';
-
+ private baseUrl = 'http://localhost:8080/api/collector/samples'
   constructor(private http: HttpClient) {}  
 
   private getHeaders() {
@@ -34,7 +33,7 @@ export class GeneralInformationservice{
     data: GeneralInformationModel
   ): Observable<ApiResponse<GeneralInformationModel>> {
     return this.http.post<ApiResponse<GeneralInformationModel>>(
-      `${this.baseUrl}/add`,
+      `${this.baseUrl}/general-information/add`,
       data,
       this.getHeaders()
     );
@@ -44,7 +43,7 @@ export class GeneralInformationservice{
     data: GeneralInformationModel
   ): Observable<ApiResponse<GeneralInformationModel>> {
     return this.http.put<ApiResponse<GeneralInformationModel>>(
-      `${this.baseUrl}/update`,
+      `${this.baseUrl}/general-information/update`,
       data,
       this.getHeaders()
     );
@@ -54,9 +53,19 @@ export class GeneralInformationservice{
     reportNumber: string
   ): Observable<ApiResponse<GeneralInformationModel[]>> {
     return this.http.post<ApiResponse<GeneralInformationModel[]>>(
-      `${this.baseUrl}/by-report`,
+      `${this.baseUrl}/general-information/by-report`,
       { reportNumber },
       this.getHeaders()
+    );
+  }
+
+  deleteInformation(id: number): Observable<ApiResponse<any>> {
+    return this.http.delete<ApiResponse<any>>(
+      `${this.baseUrl}/general-information/delete`,
+      {
+        headers: this.getHeaders().headers,
+        params: { id: id.toString() }
+      }
     );
   }
 }

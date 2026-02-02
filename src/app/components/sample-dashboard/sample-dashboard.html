@@ -1,123 +1,151 @@
-
 <app-sample-header></app-sample-header>
 
-<div class="dashboard">
-  <div class="dashboard-header">
-   
-    
+<main class="main-content">
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <h2>Dashboard Overview</h2>
+    <button class="btn-add-sample" (click)="addNewSample()">
+      <span>➕</span>
+      Add New Sample
+    </button>
   </div>
 
-  <!-- Stats Card -->
-  <div class="stats-container">
-    <div class="stat-card">
-      <div class="stat-number">{{ samples.length }}</div>
-      <div class="stat-label">Samples Today</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">{{ totalElements }}</div>
-      <div class="stat-label">Total Samples</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">{{ getQualityCheckedCount() }}</div>
-      <div class="stat-label">Approved</div>
-    </div>
-  </div>
-<div class="action-bar">
-  <button class="btn-register" (click)="registerNewSample()">
-    <span class="btn-icon">+</span>
-    Register New Sample
-  </button>
-</div>
-
-<!-- 
-  Loading Skeleton -->
-  <div *ngIf="loading" class="loading-container">
-    <div class="spinner"></div>
-    <p>Loading samples...</p>
+  <!-- Loading Indicator -->
+  <div *ngIf="isLoading" class="loading-container" style="text-align: center; padding: 2rem;">
+    <div class="loading-spinner" style="margin: 0 auto;">Loading dashboard data...</div>
   </div>
 
-  <!-- Table Section -->
-  <div *ngIf="!loading && samples.length > 0" class="table-section">
-    <div class="table-wrapper">
-      <table class="samples-table">
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card" *ngFor="let stat of stats">
+      <div class="stat-icon" [ngClass]="stat.iconClass">{{ stat.icon }}</div>
+      <div class="stat-info">
+        <h3>{{ stat.title }}</h3>
+        <div class="stat-value">{{ stat.value | number }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Samples -->
+  <section class="section" id="recent-samples">
+    <div class="section-header">
+      <h2 class="section-title">
+        <span>🕒</span>
+        Recent Samples
+      </h2>
+      <a class="view-all" (click)="goToAllSamples()">
+  View All →
+</a>
+    </div>
+    <div class="table-container">
+      <table>
         <thead>
           <tr>
-            <th class="col-id">ID</th>
-            <th class="col-report">Report No</th>
-            <th class="col-name">Sample Name</th>
-            <th class="col-date">Date Created</th>
-            <th class="col-project">Project Name</th>
-             <th class="col-tech">Technician Checked</th>
-            <th class="col-quality">Quality Checked</th>
-            <th class="col-action">Action</th>
+            <th>Sample ID</th>
+            <th>Sample Type</th>
+            <th>Collection Date</th>
+            <th>Collector</th>
+            <th>Location</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let sample of samples; let i = index" [class.checked]="sample.qualityChecked">
-            <td class="col-id">{{ i + 1 }}</td>
-            <td class="col-report"><strong>{{ sample.reportNumber }}</strong></td>
-            <td class="col-name">{{ sample.sampleDescription }}</td>
-            <td class="col-date">{{ sample.createdAt | date: 'short' }}</td>
-            <td class="col-project">{{ sample.projectName || '-' }}</td>
-            <td class="col-tech">
-              <span [class.badge-checked]="sample.techanicianChecked" [class.badge-pending]="!sample.techanicianChecked" class="badge">
-                {{ sample.techanicianChecked ? '✓ Checked' : '⏳ Pending' }}
+          <tr *ngIf="recentSamples.length === 0 && !isLoading">
+            <td colspan="6" style="text-align: center; padding: 2rem; color: #666;">
+              No samples found. Add your first sample to get started!
+            </td>
+          </tr>
+          <tr *ngFor="let sample of recentSamples">
+            <td>{{ sample.id }}</td>
+            <td>{{ sample.type }}</td>
+            <td>{{ sample.collectionDate }}</td>
+            <td>{{ sample.collector }}</td>
+            <td [title]="sample.location" style="cursor: help;">
+              {{ sample.location }}
+            </td>
+            <td>
+              <span [ngClass]="getStatusClass(sample.status)">
+                {{ getStatusText(sample.status) }}
               </span>
             </td>
-            <td class="col-quality">
-              <span [class.badge-checked]="sample.qualityChecked" [class.badge-pending]="!sample.qualityChecked" class="badge">
-                {{ sample.qualityChecked ? '✓ Checked' : '⏳ Pending' }}
-              </span>
-            </td>
-            
-           <td class="col-action">
-  <button 
-    class="btn-action btn-view"
-    title="View Sample"
-    (click)="viewSample(sample)">
-    👁️
-  </button>
-
- <button 
-  class="btn-action btn-edit"
-  title="Edit Sample"
-  [disabled]="sample.qualityChecked"
-  (click)="editSample(sample)">
-  ✏️
-</button>
-</td>
-</tr>
+          </tr>
         </tbody>
       </table>
     </div>
+  </section>
 
-    <!-- Pagination -->
-    <div class="pagination-container" *ngIf="totalPages > 1">
-      <button 
-        class="btn-pag" 
-        [disabled]="currentPage === 0"
-        (click)="onPageChange(currentPage - 1)">
-        ← Previous
-      </button>
-      <div class="page-info">
-        Page {{ currentPage + 1 }} of {{ totalPages }}
-      </div>
-      <button 
-        class="btn-pag" 
-        [disabled]="currentPage === totalPages - 1"
-        (click)="onPageChange(currentPage + 1)">
-        Next →
-      </button>
+  <!-- Sample Library -->
+  <section class="section" id="sample-library">
+    <div class="section-header">
+      <h2 class="section-title">
+        <span>📚</span>
+        Sample Library
+      </h2>
+      <a class="view-all" (click)="goToAllSamples()">
+  View All →
+</a>
     </div>
-  </div>
-  <!-- Empty State -->
-  <div *ngIf="!loading && samples.length === 0" class="empty-state">
-    <div class="empty-icon">📋</div>
-    <h3>No Samples Found</h3>
-    <p>No samples found for the selected date range.</p>
-    <button class="btn-register" (click)="registerNewSample()">
-      <span class="btn-icon">+</span>
-      Register Your First Sample
-    </button>
-  </div>
-</div>
+    <div class="sample-grid">
+      <div *ngIf="librarySamples.length === 0 && !isLoading" 
+           style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666;">
+        No samples in library yet.
+      </div>
+      <div class="sample-card" *ngFor="let sample of librarySamples">
+        <div class="sample-card-header">
+          <div style="flex: 1; min-width: 0;">
+            <div class="sample-id" [title]="sample.id">{{ sample.id }}</div>
+            <div class="sample-type" [title]="sample.type">{{ sample.type }}</div>
+          </div>
+          <span [ngClass]="getStatusClass(sample.status)" style="flex-shrink: 0;">
+            {{ sample.status === 'analysis' ? 'Analysis' : sample.status === 'approved' ? 'Approved' : 'Pending' }}
+          </span>
+        </div>
+        <div class="sample-details">
+          <div [title]="'Location: ' + sample.location">
+            📍 Location: {{ sample.location }}
+          </div>
+          <div>👤 Collector: {{ sample.collector }}</div>
+          <div>📅 Date: {{ sample.collectionDate }}</div>
+          <div *ngIf="sample.tests" [title]="'Tests: ' + sample.tests">
+            🧪 Tests: {{ sample.tests }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reports Section -->
+  <section class="section" id="reports">
+    <div class="section-header">
+      <h2 class="section-title">
+        <span>📄</span>
+        Recent Reports
+      </h2>
+      <a href="#" class="view-all">Generate New Report →</a>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Report ID</th>
+            <th>Report Type</th>
+            <th>Generated Date</th>
+            <th>Period</th>
+            <th>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let report of reports">
+            <td>{{ report.id }}</td>
+            <td>{{ report.type }}</td>
+            <td>{{ report.generatedDate }}</td>
+            <td>{{ report.period }}</td>
+            <td>
+              <a href="#" class="download-link">📥 Download</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>

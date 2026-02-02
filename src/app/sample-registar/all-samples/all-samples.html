@@ -1,0 +1,263 @@
+<app-sample-header></app-sample-header>
+
+<main class="samples-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="page-title">
+          <span class="title-icon">📋</span>
+          All Samples
+        </h1>
+        <p class="page-subtitle">Manage and track all sample records</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" (click)="refreshData()" [disabled]="isLoading" title="Refresh">
+          <span class="icon">🔄</span>
+        </button>
+        <button class="btn-icon" (click)="exportToExcel()" title="Export to Excel">
+          <span class="icon">📥</span>
+        </button>
+        <button class="btn-primary" (click)="addNewSample()">
+          <span class="icon">➕</span>
+          Add New Sample
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Stats Overview -->
+  <div class="stats-overview">
+    <div class="stat-item stat-total">
+      <div class="stat-icon">📦</div>
+      <div class="stat-details">
+        <span class="stat-label">Total Samples</span>
+        <span class="stat-value">{{ stats.total | number }}</span>
+      </div>
+    </div>
+    <div class="stat-item stat-pending">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-details">
+        <span class="stat-label">Pending</span>
+        <span class="stat-value">{{ stats.pending | number }}</span>
+      </div>
+    </div>
+    <div class="stat-item stat-analysis">
+      <div class="stat-icon">🔬</div>
+      <div class="stat-details">
+        <span class="stat-label">Under Analysis</span>
+        <span class="stat-value">{{ stats.analysis | number }}</span>
+      </div>
+    </div>
+    <div class="stat-item stat-approved">
+      <div class="stat-icon">✅</div>
+      <div class="stat-details">
+        <span class="stat-label">Approved</span>
+        <span class="stat-value">{{ stats.approved | number }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="filters-section">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search by sample ID, report number, project name, or location..."
+        [value]="filters.searchTerm"
+        (input)="onSearchChange($any($event.target).value)"
+      />
+      <button 
+        *ngIf="filters.searchTerm" 
+        class="clear-search" 
+        (click)="filters.searchTerm = ''; onFilterChange()">
+        ✕
+      </button>
+    </div>
+
+    <div class="filters-row">
+      <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select class="filter-select" [(ngModel)]="filters.status" (change)="onFilterChange()">
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="analysis">Under Analysis</option>
+          <option value="approved">Approved</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Sample Type</label>
+        <select class="filter-select" [(ngModel)]="filters.sampleType" (change)="onFilterChange()">
+          <option value="all">All Types</option>
+          <option value="drinking water">Drinking Water</option>
+          <option value="water">Water Sample</option>
+          <option value="soil">Soil Sample</option>
+          <option value="air">Air Quality</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">From Date</label>
+        <input
+          type="date"
+          class="filter-input"
+          [(ngModel)]="filters.fromDate"
+          (change)="onFilterChange()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">To Date</label>
+        <input
+          type="date"
+          class="filter-input"
+          [(ngModel)]="filters.toDate"
+          (change)="onFilterChange()"
+        />
+      </div>
+
+      <div class="filter-group">
+        <button class="btn-clear-filters" (click)="clearFilters()">
+          <span class="icon">🗑️</span>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Info -->
+  <div class="results-info">
+    <div class="results-count">
+      Showing 
+      <strong>{{ filteredSamples.length }}</strong> 
+      of 
+      <strong>{{ pagination.totalElements }}</strong> 
+      samples
+    </div>
+    <div class="page-size-selector">
+      <label>Show</label>
+      <select [(ngModel)]="pagination.pageSize" (change)="onPageSizeChange()">
+        <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+      </select>
+      <label>per page</label>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading samples...</p>
+  </div>
+
+  <!-- Samples Table -->
+  <div class="table-wrapper" *ngIf="!isLoading">
+    <table class="samples-table">
+      <thead>
+        <tr>
+          <th>Sample Number</th>
+          <th>Report Number</th>
+          <th>Project Name</th>
+          <th>Sample Description</th>
+          <th>Receiving Date</th>
+          <th>Reporting Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="filteredSamples.length === 0">
+          <td colspan="8" class="no-data">
+            <div class="empty-state">
+              <span class="empty-icon">🔍</span>
+              <h3>No samples found</h3>
+              <p>Try adjusting your filters or search terms</p>
+            </div>
+          </td>
+        </tr>
+        <tr *ngFor="let sample of filteredSamples" class="sample-row">
+          <td class="sample-number">
+            <div class="cell-content">
+              <span class="mono">{{ sample.sampleNumber }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              <span class="mono">{{ sample.reportNumber }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="cell-content" [title]="sample.projectName">
+              {{ sample.projectName || 'N/A' }}
+            </div>
+          </td>
+          <td>
+            <div class="cell-content" [title]="sample.sampleDescription">
+              {{ sample.sampleDescription || 'N/A' }}
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              {{ formatDate(sample.dateOfReceiving) }}
+            </div>
+          </td>
+          <td>
+            <div class="cell-content">
+              {{ formatDate(sample.reportingDate) }}
+            </div>
+          </td>
+          <td>
+            <span [ngClass]="getStatusClass(sample)">
+              {{ getStatusText(sample) }}
+            </span>
+          </td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-action btn-view" (click)="viewSample(sample)" title="View Details">
+                <span class="icon">👁️</span>
+              </button>
+              <button class="btn-action btn-edit" (click)="editSample(sample)" title="Edit">
+                <span class="icon">✏️</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-section" *ngIf="pagination.totalPages > 1 && !isLoading">
+    <div class="pagination-info">
+      Page {{ pagination.currentPage + 1 }} of {{ pagination.totalPages }}
+    </div>
+    <div class="pagination-controls">
+      <button 
+        class="page-btn page-btn-prev" 
+        (click)="previousPage()" 
+        [disabled]="pagination.currentPage === 0">
+        ← Previous
+      </button>
+
+      <div class="page-numbers">
+        <button
+          *ngFor="let page of getPageNumbers()"
+          class="page-number"
+          [class.active]="page === pagination.currentPage"
+          [class.ellipsis]="page === -1"
+          [disabled]="page === -1"
+          (click)="page !== -1 && goToPage(page)">
+          {{ page === -1 ? '...' : page + 1 }}
+        </button>
+      </div>
+
+      <button 
+        class="page-btn page-btn-next" 
+        (click)="nextPage()" 
+        [disabled]="pagination.currentPage === pagination.totalPages - 1">
+        Next →
+      </button>
+    </div>
+  </div>
+</main>

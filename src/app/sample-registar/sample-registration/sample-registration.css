@@ -1,10 +1,29 @@
+/* Header Positioning - Fixed at top */
+app-sample-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Main Dashboard - Account for fixed header */
+.dashboard {
+  padding-top: 80px; /* Adjust based on your header height */
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+/* Sample Registration Container */
 .sample-registration-container {
   padding: 20px;
   max-width: 1000px;
   margin: 50px auto;
 }
 
-
+/* Form Card */
 .form-card {
   background: #fff;
   border-radius: 8px;
@@ -12,6 +31,7 @@
   padding: 30px;
 }
 
+/* Form Title */
 .form-title {
   margin: 0 0 25px 0;
   color: #333;
@@ -21,6 +41,7 @@
   padding-bottom: 10px;
 }
 
+/* Alert Messages */
 .alert {
   padding: 12px 16px;
   border-radius: 4px;
@@ -40,6 +61,7 @@
   color: #721c24;
 }
 
+/* Form Layout */
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -56,6 +78,7 @@
   grid-column: 1 / -1;
 }
 
+/* Labels */
 label {
   margin-bottom: 6px;
   font-weight: 500;
@@ -68,25 +91,57 @@ label {
   margin-left: 2px;
 }
 
+/* Input Fields */
 input[type="text"],
 input[type="date"],
+select,
 textarea {
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
 }
 
 input[type="text"]:focus,
 input[type="date"]:focus,
+select:focus,
 textarea:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
+/* Disabled State */
+input[type="text"]:disabled,
+input[type="date"]:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Select Dropdown Styling */
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+select option {
+  padding: 8px;
+}
+
+/* Invalid State */
 input.invalid,
+select.invalid,
 textarea.invalid {
   border-color: #dc3545;
 }
@@ -97,11 +152,71 @@ textarea.invalid {
   margin-top: 4px;
 }
 
+/* Textarea */
 textarea {
   resize: vertical;
-  font-family: inherit;
+  min-height: 60px;
 }
 
+/* Test Parameters Container */
+.test-parameters-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.parameters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.parameter-item {
+  padding: 8px 12px;
+  background-color: white;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+
+.parameter-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.parameter-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.parameter-unit {
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.loading-message,
+.info-message {
+  text-align: center;
+  color: #6c757d;
+  font-size: 14px;
+  padding: 12px;
+}
+
+.loading-message {
+  font-style: italic;
+}
+
+.info-message {
+  color: #0d6efd;
+}
+
+/* Form Actions */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -111,6 +226,7 @@ textarea {
   border-top: 1px solid #eee;
 }
 
+/* Buttons */
 .btn {
   padding: 10px 24px;
   border: none;
@@ -119,6 +235,7 @@ textarea {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 100px;
 }
 
 .btn:disabled {
@@ -133,6 +250,7 @@ textarea {
 
 .btn-primary:hover:not(:disabled) {
   background-color: #0056b3;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .btn-secondary {
@@ -142,9 +260,20 @@ textarea {
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #545b62;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
+  .dashboard {
+    padding-top: 70px; /* Adjust for smaller header on mobile */
+  }
+
+  .sample-registration-container {
+    padding: 15px;
+    margin: 20px auto;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
@@ -153,27 +282,44 @@ textarea {
     padding: 20px;
   }
   
+  .form-title {
+    font-size: 20px;
+  }
+  
   .form-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
   
   .btn {
     width: 100%;
   }
+
+  .parameter-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 
-app-sample-header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: #ffffff; /* important */
-}
+@media (max-width: 480px) {
+  .sample-registration-container {
+    margin: 10px auto;
+  }
 
-app-sample-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1000;
-  background: #ffffff;
+  .form-card {
+    padding: 15px;
+    border-radius: 4px;
+  }
+
+  .form-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  input[type="text"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
 }

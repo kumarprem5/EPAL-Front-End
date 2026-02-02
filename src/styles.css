@@ -1,1 +1,93 @@
 /* You can add global styles to this file, and also import other style files */
+/* =========================
+   DARK THEME VARIABLES
+   ========================= */
+:root {
+  --primary-color: #4CAF50;
+  --hover-color: #66BB6A;
+}
+
+/* Dark Theme */
+.dark-theme {
+  --bg-color: #0f172a;
+  --secondary-bg: #020617;
+  --card-bg: #020617;
+  --border-color: #1e293b;
+  --text-color: #e5e7eb;
+  --muted-text: #9ca3af;
+  --shadow-color: rgba(0, 0, 0, 0.6);
+}
+
+
+/* Global Styles - Dark Theme */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary-color: #4CAF50;
+  --bg-color: #0F1419;
+  --text-color: #E8EAED;
+  --card-bg: #1A1F2E;
+  --hover-color: #66BB6A;
+  --border-color: #2D3748;
+  --success: #4CAF50;
+  --warning: #FF9800;
+  --info: #2196F3;
+  --secondary-bg: #151B23;
+  --muted-text: #9CA3AF;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+/* Reset some default styles */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Scrollbar Styling for Dark Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}

@@ -1,0 +1,24 @@
+<aside
+  class="sidebar-gradient fixed top-0 left-0 h-full z-40
+         transition-all duration-300"
+  [class.w-64]="!collapsed"
+  [class.w-20]="collapsed">
+
+  <nav class="space-y-2 relative">
+    <button
+      class="menu-item flex items-center gap-3 px-4 py-3 relative"
+      (click)="go('dashboard')">
+
+      <svg></svg>
+
+      <span *ngIf="!collapsed">Dashboard</span>
+
+      <!-- Tooltip -->
+      <span *ngIf="collapsed"
+        class="absolute left-full ml-2 px-2 py-1 text-xs glassmorphism">
+        Dashboard
+      </span>
+
+    </button>
+  </nav>
+</aside>

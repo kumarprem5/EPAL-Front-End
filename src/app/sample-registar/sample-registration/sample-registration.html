@@ -45,20 +45,31 @@
           </div>
         </div>
 
+        <!-- ERROR FIXED: Added missing opening < bracket -->
         <div class="form-row">
           <div class="form-group full-width">
             <label for="sampleDescription">Sample Description <span class="required">*</span></label>
-            <textarea 
+            <select 
               id="sampleDescription" 
               formControlName="sampleDescription"
               [class.invalid]="isFieldInvalid('sampleDescription')"
-              placeholder="Enter sample description"
-              rows="3"></textarea>
+              (change)="onSampleDescriptionChange($event)"
+              >
+              <option value="">
+                {{ loadingDescriptions ? 'Loading descriptions...' : 'Select sample description' }}
+              </option>
+              <option *ngFor="let description of sampleDescriptions" [value]="description">
+                {{ description }}
+              </option>
+            </select>
             <span class="error-message" *ngIf="isFieldInvalid('sampleDescription')">
               Sample description is required
             </span>
           </div>
         </div>
+        <!-- ERROR FIXED: Added missing closing </div> tag -->
+
+       
 
         <div class="form-row">
           <div class="form-group full-width">
@@ -70,7 +81,6 @@
               placeholder="Enter sampling and analysis protocol">
           </div>
         </div>
-
         <div class="form-row">
           <div class="form-group">
             <label for="formatNumber">Format Number</label>
@@ -127,6 +137,7 @@
               placeholder="Enter period of analysis">
           </div>
         </div>
+
         <div class="form-actions">
           <button 
             type="button" 

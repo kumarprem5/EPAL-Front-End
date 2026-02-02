@@ -1,55 +1,160 @@
 <app-sample-header></app-sample-header>
 
-<!-- =========================
-     SAMPLE HEADER DETAILS
-========================= -->
-<div class="sample-header-card compact" *ngIf="sample">
-
-   <h3>Project Details</h3> 
-
-  <div class="header-grid">
-    <div class="field"><span>Sample No</span>{{ sample.sampleNumber }}</div>
-    <div class="field highlight"><span>Date of Receiving</span>{{ sample.dateOfReceiving | date:'dd MMM yyyy' }}</div>
-    <div class="field"><span>Report No</span>{{ sample.reportNumber }}</div>
-    <div class="field"><span>Format No</span>{{ sample.formatNumber }}</div>
-    <div class="field full"><span>Project Name</span>{{ sample.projectName }}</div>
-    <div class="field full"><span>Address</span>{{ sample.address }}</div>
-    <div class="field full"><span>Sample Description</span>{{ sample.sampleDescription }}</div>
-  </div>
+<div *ngIf="uiMessage" class="ui-alert" [ngClass]="uiMessageType">
+  {{ uiMessage }}
 </div>
 
-<h3 class="sample-description">{{ sample.sampleDescription }}</h3>
-
-
-
 <!-- =========================
-     GENERAL INFORMATION
+     PAGE CONTENT
 ========================= -->
-<div class="general-info">
-  <h3>General Information</h3>
+<div class="page-content">
 
-  <!-- Add Form -->
-  <div class="add-form">
-    <input type="text" placeholder="Parameter Name" [(ngModel)]="newInfo.name" />
-    <input type="text" placeholder="Value" [(ngModel)]="newInfo.value" />
-    <button (click)="addInformation()">➕ Add</button>
+  <!-- =========================
+       SAMPLE HEADER DETAILS
+  ========================= -->
+  <div class="sample-header-card compact" *ngIf="sample">
+    <h3 class="header-title">Project Details</h3>
+
+    <div class="header-grid">
+      <div class="field"><span>Sample No</span>{{ sample.sampleNumber }}</div>
+      <div class="field highlight"><span>Date of Receiving</span>{{ sample.dateOfReceiving | date:'dd MMM yyyy' }}</div>
+      <div class="field"><span>Report No</span>{{ sample.reportNumber }}</div>
+      <div class="field"><span>Format No</span>{{ sample.formatNumber || 'N/A' }}</div>
+      <div class="field full"><span>Project Name</span>{{ sample.projectName || 'N/A' }}</div>
+      <div class="field full"><span>Address</span>{{ sample.address || 'N/A' }}</div>
+      <div class="field full"><span>Sample Description</span>{{ sample.sampleDescription }}</div>
+    </div>
   </div>
 
-  <!-- List Table -->
-  <table class="info-table" *ngIf="informations.length > 0">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Value</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let info of informations">
-        <td><input [(ngModel)]="info.name" /></td>
-        <td><input [(ngModel)]="info.value" /></td>
-        <td><button (click)="updateInformation(info)">💾 Save</button></td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- =========================
+       SAMPLE DESCRIPTION BANNER
+  ========================= -->
+  <div class="sample-description-banner" *ngIf="sample">
+    <div class="banner-content">
+      <div class="banner-icon">🔬</div>
+      <h2 class="sample-description">{{ sample.sampleDescription }}</h2>
+    </div>
+  </div>
+
+
+  <!-- =========================
+       GENERAL INFORMATION SECTION
+  ========================= -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="header-left">
+        <div class="section-icon">📊</div>
+        <h3>General Information</h3>
+      </div>
+      <div class="badge" *ngIf="informations.length > 0">{{ informations.length }} Entries</div>
+      <div class="badge auto-fill" *ngIf="informations.length === 0 && testParameters.length > 0">
+        Auto-filling...
+      </div>
+    </div>
+
+    <!-- Add Form -->
+    <div class="add-form">
+
+  <!-- Parameter dropdown -->
+  <!-- Parameter dropdown -->
+<div class="input-group">
+  <label>Parameter Name</label>
+
+  <select
+    class="form-input"
+    [ngModel]="selectedParameter"
+    (ngModelChange)="onParameterSelect($event)"
+  >
+    <option [ngValue]="null" disabled>
+      -- Select Parameter --
+    </option>
+
+    <option
+      *ngFor="let p of testParameters"
+      [ngValue]="p"
+    >
+      {{ p.parameterName }}
+    </option>
+  </select>
+</div>
+
+
+  <!-- Value input -->
+  <div class="input-group">
+    <label>Value</label>
+    <input
+      type="text"
+      class="form-input"
+      placeholder="Enter value"
+      [(ngModel)]="newInfo.value"
+    />
+  </div>
+
+  <button
+    class="btn-add"
+    (click)="addInformation()"
+    [disabled]="!newInfo.name || !newInfo.value"
+  >
+    <span class="btn-icon">➕</span>
+    Add Entry
+  </button>
+
+</div>
+
+
+    <!-- Loading State -->
+    <div class="loading-spinner" *ngIf="isLoadingInfo">
+      <div class="spinner"></div>
+      <p>Loading information...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoadingInfo && informations.length === 0 && testParameters.length === 0">
+      <div class="empty-icon">📋</div>
+      <h4>No Information Available</h4>
+      <p>Start by adding parameters or load test parameters first</p>
+    </div>
+
+    <!-- Data Table -->
+    <table class="data-table" *ngIf="!isLoadingInfo && informations.length > 0">
+      <thead>
+        <tr>
+          <th class="col-sno">S.No</th>
+          <th class="col-name">Name</th>
+          <th class="col-value">Value</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let info of informations; let i = index" class="data-row">
+          <td class="sno-cell">{{ i + 1 }}</td>
+          <td>
+            <input 
+              [(ngModel)]="info.name" 
+              class="editable-input"
+              placeholder="Parameter name"
+            />
+          </td>
+          <td>
+            <input 
+              [(ngModel)]="info.value" 
+              class="editable-input"
+              placeholder="Value"
+            />
+          </td>
+          <td class="action-cell">
+            <button (click)="updateInformation(info)" class="btn-save">
+              <span class="btn-icon">💾</span>
+              Save
+            </button>
+            <button (click)="removeInformation(info, i)" class="btn-remove">
+              <span class="btn-icon">🗑️</span>
+              Remove
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>

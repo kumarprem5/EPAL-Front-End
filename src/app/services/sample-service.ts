@@ -2,6 +2,18 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
+export interface SampleDescriptionRequest {
+  sampleDescription: string;
+}
+
+export interface TestParameter {
+  id: number;
+  parameterName: string;
+  values?: string;
+  // Add other fields as needed based on your backend response
+}
+
+
 export interface SampleFilterRequest {
   page: number;
   size: number;
@@ -47,6 +59,16 @@ export interface ApiResponse<T> {
   message: string;
   status: 'SUCCESS' | 'ERROR';
 }
+export interface SampleDescriptionRequest {
+  sampleDescription: string;
+}
+
+export interface TestParameter {
+  id: number;
+  parameterName: string;
+  unit?: string;
+  // Add other fields as needed based on your backend response
+}
 
 
 @Injectable({
@@ -54,7 +76,7 @@ export interface ApiResponse<T> {
 })
 export class SampleService {
 
-  private baseUrl = 'http://localhost:8080/api/collector/samples';
+   private baseUrl = 'http://localhost:8080/api/collector/samples';
 
   constructor(private http: HttpClient) {}
 
@@ -85,28 +107,24 @@ export class SampleService {
     );
   }
 
-updateSample(id: number, data: Partial<Sample>): Observable<ApiResponse<Sample>> {
-  return this.http.put<ApiResponse<Sample>>(
-    `${this.baseUrl}/update`, 
-    data, 
-    {
-      headers: this.getHeaders().headers,
-      params: { id: id.toString() }  // Ensure the ID is passed as a query parameter
-    }
-  );
-}
+  updateSample(id: number, data: Partial<Sample>): Observable<ApiResponse<Sample>> {
+    return this.http.put<ApiResponse<Sample>>(
+      `${this.baseUrl}/update`, 
+      data, 
+      {
+        headers: this.getHeaders().headers,
+        params: { id: id.toString() }
+      }
+    );
+  }
 
-
-
-getById(id: number): Observable<ApiResponse<Sample>> {
-  return this.http.post<ApiResponse<Sample>>(
-    `${this.baseUrl}/get/id`,
-    { id: id }, // Send the id in the request body
-    { headers: this.getHeaders().headers }
-  );
-}
-
-
+  getById(id: number): Observable<ApiResponse<Sample>> {
+    return this.http.post<ApiResponse<Sample>>(
+      `${this.baseUrl}/get/id`,
+      { id: id },
+      { headers: this.getHeaders().headers }
+    );
+  }
 
   getByReportNumber(reportNumber: string): Observable<ApiResponse<Sample>> {
     return this.http.post<ApiResponse<Sample>>(
@@ -129,6 +147,34 @@ getById(id: number): Observable<ApiResponse<Sample>> {
       `${this.baseUrl}/quality-check`,
       { reportNumber },
       this.getHeaders()
+    );
+  }
+
+  getAllSampleDescriptions(): Observable<ApiResponse<string[]>> {
+    return this.http.get<ApiResponse<string[]>>(
+      `${this.baseUrl}/get/sample-descriptions`,
+      this.getHeaders()
+    );
+  }
+
+  getTestParametersBySampleDescription(sampleDescription: string): Observable<ApiResponse<TestParameter[]>> {
+    const request: SampleDescriptionRequest = { sampleDescription };
+    return this.http.post<ApiResponse<TestParameter[]>>(
+      `${this.baseUrl}/test/parameter/by/sample-description`,
+      request,
+      this.getHeaders()
+    );
+  }
+
+  // Update test parameter (you'll need to implement the backend endpoint)
+  updateTestParameter(parameter: TestParameter): Observable<ApiResponse<TestParameter>> {
+    return this.http.put<ApiResponse<TestParameter>>(
+      `${this.baseUrl}/test/parameter/update`,
+      parameter,
+      {
+        headers: this.getHeaders().headers,
+        params: { id: parameter.id.toString() }
+      }
     );
   }
 }

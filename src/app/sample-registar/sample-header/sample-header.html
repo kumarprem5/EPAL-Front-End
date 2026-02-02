@@ -1,10 +1,18 @@
-  <header class="app-header">
-    <div class="logo-section">
-      <img src="/logo.png" alt="Logo" class="logo" />
-      <span class="company-name">EPAL LAB</span>
+<header class="header">
+  <div class="header-left">
+    <button class="menu-btn" (click)="onMenuClick()">
+      <span>☰</span>
+    </button>
+    <div class="lab-icon">🧪</div>
+    <div class="lab-title">
+      <h1>EPAL LAB</h1>
+      <p>Environmental Testing Laboratory</p>
     </div>
-     <div class="user-section">
-    <span class="user-name">{{ userName }}</span>
-    <button class="logout-btn" (click)="logout()">Logout</button>
   </div>
-  </header>
+  <div class="header-right">
+    <div class="user-profile">
+      <div class="user-avatar">U</div>
+      <span>{{userName}}</span>
+    </div>
+  </div>
+</header>

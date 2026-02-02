@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
-import { SampleService } from '../../services/sample-service';
+import { SampleService, TestParameter } from '../../services/sample-service';
 import { Router } from '@angular/router';
 import { SampleRequest } from '../../interfaces/sample-request';
 import { CommonModule } from '@angular/common';
 import { SampleHeader } from "../sample-header/sample-header";
+import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
 
 @Component({
   selector: 'app-sample-registration',
@@ -21,6 +22,12 @@ export class SampleRegistration {
   errorMessage = '';
   successMessage = '';
 
+  // Dropdown and test parameters
+  sampleDescriptions: string[] = [];
+  loadingDescriptions = false;
+  testParameters: TestParameter[] = [];
+  loadingParameters = false;
+
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -32,7 +39,7 @@ export class SampleRegistration {
   }
 
   ngOnInit(): void {
-    // Any initialization logic
+    this.loadSampleDescriptions();
   }
 
   ngOnDestroy(): void {
@@ -42,13 +49,12 @@ export class SampleRegistration {
 
   /**
    * Initialize the form with validators
-   * Removed sampleNumber and reportNumber as they are auto-generated
    */
   private initializeForm(): void {
     this.sampleForm = this.fb.group({
       projectName: ['', [Validators.required, Validators.minLength(3)]],
       address: ['', [Validators.required, Validators.minLength(5)]],
-      sampleDescription: ['', [Validators.required, Validators.minLength(10)]],
+      sampleDescription: ['', Validators.required],
       samplingAndAnalysisProtocol: [''],
       formatNumber: [''],
       partyReferenceNumber: [''],
@@ -56,6 +62,90 @@ export class SampleRegistration {
       periodOfAnalysis: [''],
       dateOfReceiving: ['', Validators.required]
     });
+  }
+
+  /**
+   * Load sample descriptions from backend
+   * FIXED: Properly handles response format [{sampleDescription: "value"}]
+   */
+  loadSampleDescriptions(): void {
+    this.loadingDescriptions = true;
+    
+    // Disable the dropdown while loading
+    this.sampleForm.get('sampleDescription')?.disable();
+    
+    this.sampleService.getAllSampleDescriptions()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.loadingDescriptions = false;
+          
+          if (response.status === 'SUCCESS' && response.data) {
+            // ✅ FIXED: Map the array of objects to array of strings
+            // Backend returns: [{sampleDescription: "Ambient Noise"}, ...]
+            // We need: ["Ambient Noise", ...]
+            this.sampleDescriptions = response.data.map(
+              (item: any) => item.sampleDescription
+            );
+            
+            console.log("Sample Descriptions (mapped):", this.sampleDescriptions);
+          }
+          
+          // Enable the dropdown after loading
+          this.sampleForm.get('sampleDescription')?.enable();
+        },
+        error: (error) => {
+          this.loadingDescriptions = false;
+          console.error('Error loading sample descriptions:', error);
+          this.errorMessage = 'Failed to load sample descriptions';
+          this.submitError = true;
+          
+          // Enable the dropdown even on error
+          this.sampleForm.get('sampleDescription')?.enable();
+          
+          setTimeout(() => {
+            this.submitError = false;
+          }, 3000);
+        }
+      });
+  }
+
+  /**
+   * Handle sample description change
+   */
+  onSampleDescriptionChange(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const selectedDescription = selectElement.value;
+    
+    if (selectedDescription) {
+      this.loadTestParameters(selectedDescription);
+    } else {
+      this.testParameters = [];
+    }
+  }
+
+  /**
+   * Load test parameters based on selected description
+   */
+  loadTestParameters(sampleDescription: string): void {
+    this.loadingParameters = true;
+    this.testParameters = [];
+    
+    this.sampleService.getTestParametersBySampleDescription(sampleDescription)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.loadingParameters = false;
+          if (response.status === 'SUCCESS' && response.data) {
+            this.testParameters = response.data;
+            console.log('Loaded test parameters:', this.testParameters);
+          }
+        },
+        error: (error) => {
+          this.loadingParameters = false;
+          console.error('Error loading test parameters:', error);
+        }
+      });
   }
 
   /**
@@ -82,19 +172,16 @@ export class SampleRegistration {
           this.submitSuccess = true;
           this.successMessage = response.message || 'Sample registered successfully!';
           
-          // Show the generated sample number and report number if available
           if (response.data) {
             console.log('Generated Sample Number:', response.data.sampleNumber);
             console.log('Generated Report Number:', response.data.reportNumber);
           }
           
           this.sampleForm.reset();
+          this.testParameters = [];
           
-          // Auto-hide success message after 5 seconds
           setTimeout(() => {
             this.submitSuccess = false;
-            // Optionally navigate to sample list
-            // this.router.navigate(['/samples/list']);
           }, 5000);
         },
         error: (error) => {
@@ -115,6 +202,7 @@ export class SampleRegistration {
     this.submitError = false;
     this.errorMessage = '';
     this.successMessage = '';
+    this.testParameters = [];
   }
 
   /**
@@ -132,8 +220,6 @@ export class SampleRegistration {
 
   /**
    * Check if a field is invalid and touched
-   * @param fieldName - Name of the form field
-   * @returns boolean indicating if field is invalid
    */
   isFieldInvalid(fieldName: string): boolean {
     const field = this.sampleForm.get(fieldName);
@@ -142,8 +228,6 @@ export class SampleRegistration {
 
   /**
    * Get error message for a field
-   * @param fieldName - Name of the form field
-   * @returns Error message string
    */
   getFieldError(fieldName: string): string {
     const field = this.sampleForm.get(fieldName);
@@ -162,8 +246,6 @@ export class SampleRegistration {
 
   /**
    * Get user-friendly label for field
-   * @param fieldName - Name of the form field
-   * @returns User-friendly label
    */
   private getFieldLabel(fieldName: string): string {
     const labels: { [key: string]: string } = {
@@ -183,7 +265,6 @@ export class SampleRegistration {
 
   /**
    * Mark all fields in form group as touched
-   * @param formGroup - Form group to mark
    */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
