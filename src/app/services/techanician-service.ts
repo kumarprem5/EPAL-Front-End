@@ -5,17 +5,17 @@ import { Observable } from 'rxjs';
 @Injectable({
   providedIn: 'root',
 })
-export class AnalystService {
+export class TechanicianService {
   
- private baseUrl = 'http://localhost:8080/api/analyst';
+private baseUrl = 'http://localhost:8080/api/techanician';
 
   constructor(private http: HttpClient) {}
 
-  // ✅ Reads token from both possible keys for safety
+  // ✅ Reads token from storage
   private getHeaders(): HttpHeaders {
     const token =
       localStorage.getItem('token') ||
-      localStorage.getItem('analystToken') ||
+      localStorage.getItem('technicianToken') ||
       '';
     return new HttpHeaders({
       'Content-Type': 'application/json',
@@ -36,8 +36,7 @@ export class AnalystService {
   }
 
   // ─────────────────────────────────────────────
-  // SAMPLE SEARCH
-  // Backend returns: { status: 'SUCCESS', data: Sample | PageResponse, message: string, code: string }
+  // SAMPLE SEARCH & MANAGEMENT
   // ─────────────────────────────────────────────
 
   getSampleByReportNumber(reportNumber: string): Observable<any> {
@@ -49,8 +48,6 @@ export class AnalystService {
   }
 
   searchByCompanyName(companyName: string): Observable<any> {
-    // Uses the general "get all" endpoint filtered by page; adjust if a
-    // dedicated /search/by-company endpoint is available in your backend.
     return this.http.post(
       `${this.baseUrl}/get/all`,
       { page: 0, size: 50, companyName },
@@ -62,6 +59,14 @@ export class AnalystService {
     return this.http.post(
       `${this.baseUrl}/get/id`,
       { id },
+      { headers: this.getHeaders() }
+    );
+  }
+
+  getAllSamples(filter: any): Observable<any> {
+    return this.http.post(
+      `${this.baseUrl}/get/all`,
+      filter,
       { headers: this.getHeaders() }
     );
   }
@@ -176,15 +181,11 @@ export class AnalystService {
   // WORKFLOW ACTIONS
   // ─────────────────────────────────────────────
 
- analystCheck(reportNumber: string): Observable<any> {
-    return this.http.post(
-      `${this.baseUrl}/analyst-check`,
-      { reportNumber },
-      { headers: this.getHeaders() }
-    );
-  }
-
-  technicianCheck(reportNumber: string): Observable<any> {
+  /**
+   * Send sample back to analyst for revision
+   * This sets fordwardToTechanician = false
+   */
+  sendBackToAnalyst(reportNumber: string): Observable<any> {
     return this.http.post(
       `${this.baseUrl}/technician-check`,
       { reportNumber },
@@ -192,9 +193,13 @@ export class AnalystService {
     );
   }
 
-  qualityCheck(reportNumber: string): Observable<any> {
+  /**
+   * Forward to Quality Check
+   * This sets qualityChecked = true
+   */
+  forwardToQualityCheck(reportNumber: string): Observable<any> {
     return this.http.post(
-      `${this.baseUrl}/quality-check`,
+      `${this.baseUrl}/technician-check`,
       { reportNumber },
       { headers: this.getHeaders() }
     );

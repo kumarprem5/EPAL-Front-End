@@ -1,25 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { AnalystService } from '../../services/analyst-service';
+import { TechanicianService } from '../../services/techanician-service';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { GeneralInformation } from "../../sample-registar/general-information/general-information";
-import { AddResult } from "../add-result/add-result";
-import { AnalystGeneralInfoComponent } from "../analyst-general-info.component/analyst-general-info.component";
-import { AnalystSampleResultComponent } from "../analyst-sample-result.component/analyst-sample-result.component";
-import { ApiResponse, PageResponse, SampleService } from '../../services/sample-service';
-import { filter, finalize } from 'rxjs';
-import { AnalystSampleService } from '../../services/analyst-sample-service';
+import { TechnicianSampleResult } from "../technician-sample-result/technician-sample-result";
+import { TechanicianGeneralInfo } from "../techanician-general-info/techanician-general-info";
 
 @Component({
-  selector: 'app-analyst-dashboard',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule,AnalystGeneralInfoComponent, AnalystSampleResultComponent],
-  templateUrl: './analyst-dashboard.html',
-  styleUrl: './analyst-dashboard.css',
+  selector: 'app-technician-dashboard',
+  imports: [FormsModule, CommonModule, ReactiveFormsModule, TechnicianSampleResult, TechanicianGeneralInfo],
+  templateUrl: './technician-dashboard.html',
+  styleUrl: './technician-dashboard.css',
 })
-export class AnalystDashboard implements OnInit {
-
-   isLoading = false;
+export class TechnicianDashboard implements OnInit {
+  isLoading = false;
   hasSearched = false;
   currentUser: any;
   searchForm: FormGroup;
@@ -29,26 +24,26 @@ export class AnalystDashboard implements OnInit {
   selectedSample: any = null;
   showEditModal = false;
   showResultModal = false;
-  showForwardModal = false;
+  showSendBackModal = false;
+  showQualityCheckModal = false;
 
   stats = {
-    pendingAnalysis: 0,
-    completedToday: 0,
-    forwardedToTechnician: 0,
+    pendingReview: 0,
+    sentBackToAnalyst: 0,
+    forwardedToQuality: 0,
     totalProcessed: 0
   };
 
   constructor(
     private fb: FormBuilder,
-    private analystService: AnalystService,
-    private router: Router,
-    private sampleService: AnalystSampleService,
+    private technicianService: TechanicianService,
+    private router: Router
   ) {
     this.searchForm = this.fb.group({ searchValue: [''] });
   }
 
   ngOnInit() {
-    const userStr = localStorage.getItem('userProfile');
+    const userStr = localStorage.getItem('technicianUser') || localStorage.getItem('userProfile');
     if (userStr) this.currentUser = JSON.parse(userStr);
     this.loadDashboardStats();
   }
@@ -61,10 +56,10 @@ export class AnalystDashboard implements OnInit {
     this.isLoading = true;
     const filter = { page: 0, size: 50 };
 
-    this.sampleService.getAllSamples(filter)
+    this.technicianService.getAllSamples(filter)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
-        next: (response: ApiResponse<PageResponse>) => {
+        next: (response: any) => {
           if (response.status === 'SUCCESS' && response.data.content) {
             this.processBackendData(response.data);
           }
@@ -75,27 +70,35 @@ export class AnalystDashboard implements OnInit {
       });
   }
 
-  private processBackendData(pageResponse: PageResponse): void {
-    const samples = pageResponse.content;
-    if (!samples || samples.length === 0) return;
+ private processBackendData(pageResponse: any): void {
 
-    const today = new Date().toDateString();
+  const samples = pageResponse.content.filter(
+    (s: any) => s?.fordwardToTechanician === true
+  );
 
-    this.stats.totalProcessed = pageResponse.totalElements;
+  if (!samples || samples.length === 0) return;
 
-    this.stats.pendingAnalysis = samples.filter(
-      s => !s.techanicianChecked && !s.qualityChecked
-    ).length;
+  const technicianSamples = samples.filter(
+    (s: any) => s.techanicianChecked === true
+  );
 
-    this.stats.completedToday = samples.filter(s => {
-      const updated = new Date(s.updatedAt).toDateString();
-      return updated === today && s.qualityChecked;
-    }).length;
+  this.stats.totalProcessed = technicianSamples.length;
 
-    this.stats.forwardedToTechnician = samples.filter(
-      s => s.techanicianChecked && !s.qualityChecked
-    ).length;
-  }
+  this.stats.pendingReview = technicianSamples.filter(
+    (s: any) => !s.qualityChecked
+  ).length;
+
+  this.stats.sentBackToAnalyst = samples.filter(
+    (s: any) =>
+      s.techanicianChecked &&
+      !s.fordwardToTechanician &&
+      !s.qualityChecked
+  ).length;
+
+  this.stats.forwardedToQuality = technicianSamples.filter(
+    (s: any) => s.qualityChecked
+  ).length;
+}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // SEARCH
@@ -127,15 +130,20 @@ export class AnalystDashboard implements OnInit {
     if (response?.status === 'SUCCESS' && response?.data != null) {
       const raw = response.data;
 
+      let allResults: any[] = [];
+      
       if (Array.isArray(raw)) {
-        this.searchResults = raw;
+        allResults = raw;
       } else if (raw?.content && Array.isArray(raw.content)) {
-        this.searchResults = raw.content;
+        allResults = raw.content;
       } else if (typeof raw === 'object') {
-        this.searchResults = [raw];
+        allResults = [raw];
       } else {
-        this.searchResults = [];
+        allResults = [];
       }
+
+      // Filter to show ONLY samples where techanicianChecked = true
+      this.searchResults = allResults.filter(sample => sample.fordwardToTechanician === true);
     } else {
       this.searchResults = [];
     }
@@ -145,7 +153,7 @@ export class AnalystDashboard implements OnInit {
   }
 
   searchByReportNumber(reportNumber: string) {
-    this.analystService.getSampleByReportNumber(reportNumber).subscribe({
+    this.technicianService.getSampleByReportNumber(reportNumber).subscribe({
       next: (r) => this.handleSearchResponse(r),
       error: (err) => {
         console.error('Report number search failed:', err);
@@ -157,7 +165,7 @@ export class AnalystDashboard implements OnInit {
   }
 
   searchByCompanyName(companyName: string) {
-    this.analystService.searchByCompanyName(companyName).subscribe({
+    this.technicianService.searchByCompanyName(companyName).subscribe({
       next: (r) => this.handleSearchResponse(r),
       error: (err) => {
         console.error('Company name search failed:', err);
@@ -169,7 +177,7 @@ export class AnalystDashboard implements OnInit {
   }
 
   searchBySampleId(sampleId: string) {
-    this.analystService.getSampleById(Number(sampleId)).subscribe({
+    this.technicianService.getSampleById(Number(sampleId)).subscribe({
       next: (r) => this.handleSearchResponse(r),
       error: (err) => {
         console.error('Sample ID search failed:', err);
@@ -185,14 +193,14 @@ export class AnalystDashboard implements OnInit {
   // ─────────────────────────────────────────────────────────────────────────────
 
   getSampleStatus(sample: any): string {
-    if (sample.qualityChecked) return 'Completed';
-    if (sample.techanicianChecked) return 'Forwarded';
+    if (sample.qualityChecked) return 'QA Approved';
+    if (sample.fordwardToTechanician) return 'In Review';
     return 'Pending';
   }
 
   getSampleStatusClass(sample: any): string {
-    if (sample.qualityChecked) return 'completed';
-    if (sample.techanicianChecked) return 'forwarded';
+    if (sample.qualityChecked) return 'qa-approved';
+    if (sample.fordwardToTechanician) return 'in-review';
     return 'pending';
   }
 
@@ -210,57 +218,83 @@ export class AnalystDashboard implements OnInit {
     this.showResultModal = true; 
   }
 
-  forwardToTechnician(sample: any) { 
+  sendBackToAnalyst(sample: any) { 
     this.selectedSample = sample; 
-    this.showForwardModal = true; 
+    this.showSendBackModal = true; 
+  }
+
+  forwardToQualityCheck(sample: any) { 
+    this.selectedSample = sample; 
+    this.showQualityCheckModal = true; 
   }
 
   closeModal() {
     this.showEditModal = false;
     this.showResultModal = false;
-    this.showForwardModal = false;
+    this.showSendBackModal = false;
+    this.showQualityCheckModal = false;
     this.selectedSample = null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // WORKFLOW ACTIONS - USES ANALYST-CHECK API
+  // WORKFLOW ACTIONS
   // ─────────────────────────────────────────────────────────────────────────────
 
-  confirmForward() {
+  confirmSendBackToAnalyst() {
     if (!this.selectedSample) return;
     
-    // ✅ Use analystCheck API to forward to technician
-    this.analystService.analystCheck(this.selectedSample.reportNumber).subscribe({
+    this.technicianService.sendBackToAnalyst(this.selectedSample.reportNumber).subscribe({
       next: (response) => {
         if (response?.status === 'SUCCESS') {
-          alert('Sample forwarded to technician successfully!');
+          alert('Sample sent back to analyst successfully!');
           this.closeModal();
           this.onSearch();
           this.loadDashboardStats();
         } else {
-          alert(response?.message || 'Failed to forward sample');
+          alert(response?.message || 'Failed to send back to analyst');
         }
       },
-      error: () => alert('Failed to forward sample. Please try again.')
+      error: () => alert('Failed to send back to analyst. Please try again.')
     });
   }
+
+ confirmForwardToQualityCheck() {
+  if (!this.selectedSample) return;
+
+  this.technicianService
+    .forwardToQualityCheck(this.selectedSample.reportNumber)
+    .subscribe({
+      next: (response) => {
+        if (response?.status === 'SUCCESS') {
+          alert('Sample forwarded to Quality Check successfully!');
+          this.closeModal();
+          this.onSearch();
+          this.loadDashboardStats();
+        } else {
+          alert(response?.message || 'Failed to forward to Quality Check');
+        }
+      },
+      error: () =>
+        alert('Failed to forward to Quality Check. Please try again.')
+    });
+}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // AUTH
   // ─────────────────────────────────────────────────────────────────────────────
 
   logout() {
-    this.analystService.logout().subscribe({
+    this.technicianService.logout().subscribe({
       next: () => this.clearAndRedirect(),
       error: () => this.clearAndRedirect()
     });
   }
 
   private clearAndRedirect() {
-    localStorage.removeItem('analystToken');
-    localStorage.removeItem('analystUser');
+    localStorage.removeItem('technicianToken');
+    localStorage.removeItem('technicianUser');
     localStorage.removeItem('token');
     localStorage.removeItem('userProfile');
-    this.router.navigate(['/analyst/login']);
+    this.router.navigate(['/technician/login']);
   }
 }

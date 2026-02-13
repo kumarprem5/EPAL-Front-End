@@ -11,6 +11,10 @@ import { AnalystDashboard } from './analyst/analyst-dashboard/analyst-dashboard'
 import { AnalystAuth } from './services/analyst-auth';
 import { AnalystGeneralInfoComponent } from './analyst/analyst-general-info.component/analyst-general-info.component';
 import { AnalystSampleResultComponent } from './analyst/analyst-sample-result.component/analyst-sample-result.component';
+import { TechnicianLogin } from './components/technician-login/technician-login';
+import { TechnicianDashboard } from './techanician/technician-dashboard/technician-dashboard';
+import { TechnicianSampleResult } from './techanician/technician-sample-result/technician-sample-result';
+import { TechanicianGeneralInfo } from './techanician/techanician-general-info/techanician-general-info';
 
 export const routes: Routes = [
  { path: 'home', component: HomePage },
@@ -39,5 +43,9 @@ export const routes: Routes = [
     component: AnalystSampleResultComponent
 
   },
+   { path: 'techanician/login', component: TechnicianLogin },
+   { path: 'techanician/dashboard', component: TechnicianDashboard },
+   { path: 'techanician/general-info', component:TechanicianGeneralInfo },
+   { path: 'techanician/sample-result', component: TechnicianSampleResult},
 ];
 

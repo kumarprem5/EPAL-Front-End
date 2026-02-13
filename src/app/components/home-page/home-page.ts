@@ -22,4 +22,9 @@ goToAnalystLogin(){
 
 
 }
+
+goToTechanicianLogin(){
+
+  this.router.navigate(['/techanician/login']);
+}
 }

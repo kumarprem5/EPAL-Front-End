@@ -7,14 +7,14 @@
     <div class="header-content">
       <div class="header-left">
         <div class="logo">
-          <span class="logo-icon">🔬</span>
-          <span class="logo-text">Lab Analyst Portal</span>
+          <span class="logo-icon">🔧</span>
+          <span class="logo-text">Lab Technician Portal</span>
         </div>
       </div>
       <div class="header-right">
         <div class="user-info">
           <span class="user-icon">👤</span>
-          <span class="user-name">{{ currentUser?.analystName || 'Analyst' }}</span>
+          <span class="user-name">{{ currentUser?.adminName || currentUser?.name || 'Technician' }}</span>
         </div>
         <button class="logout-btn" (click)="logout()">
           <span>🚪</span> Logout
@@ -22,7 +22,6 @@
       </div>
     </div>
   </header>
-
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <!-- GLOBAL LOADING OVERLAY -->
   <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -30,7 +29,6 @@
     <div class="loading-spinner"></div>
     <p>Loading dashboard...</p>
   </div>
-
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <!-- STATS -->
   <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -38,26 +36,26 @@
     <div class="stats-grid">
 
       <div class="stat-card">
-        <div class="stat-icon pending">📋</div>
+        <div class="stat-icon pending-review">🔍</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.pendingAnalysis }}</div>
-          <div class="stat-label">Pending Analysis</div>
+          <div class="stat-number">{{ stats.pendingReview }}</div>
+          <div class="stat-label">Pending Review</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon completed">✅</div>
+        <div class="stat-icon sent-back">↩️</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.completedToday }}</div>
-          <div class="stat-label">Completed Today</div>
+          <div class="stat-number">{{ stats.sentBackToAnalyst }}</div>
+          <div class="stat-label">Sent Back to Analyst</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon forwarded">📤</div>
+        <div class="stat-icon forwarded-qa">✅</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.forwardedToTechnician }}</div>
-          <div class="stat-label">Forwarded to Technician</div>
+          <div class="stat-number">{{ stats.forwardedToQuality }}</div>
+          <div class="stat-label">Forwarded to QA</div>
         </div>
       </div>
 
@@ -77,7 +75,7 @@
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <section class="search-section">
     <div class="section-header">
-      <h2 class="section-title">Search Reports</h2>
+      <h2 class="section-title">Search Samples</h2>
       <p class="section-subtitle">Find samples by report number, company name, or sample ID</p>
     </div>
 
@@ -198,8 +196,8 @@
             <div class="info-item">
               <span class="info-label">🔧 Tech Check</span>
               <span class="info-value">
-                <span class="pill" [ngClass]="sample.techanicianChecked ? 'pill-yes' : 'pill-no'">
-                  {{ sample.techanicianChecked ? 'Forwarded' : 'Pending' }}
+                <span class="pill" [ngClass]="sample.fordwardToTechanician ? 'pill-yes' : 'pill-no'">
+                  {{ sample.fordwardToTechanician ? 'Yes' : 'No' }}
                 </span>
               </span>
             </div>
@@ -212,25 +210,44 @@
                 </span>
               </span>
             </div>
-
           </div>
         </div>
-
         <!-- ── Card Actions ── -->
         <div class="result-actions">
-          <button class="action-btn edit-btn" (click)="editGeneralInformation(sample)">
+          <!-- Edit Info Button: Disabled only if QA approved -->
+          <button 
+            class="action-btn edit-btn" 
+            (click)="editGeneralInformation(sample)"
+              [disabled]="sample.qualityChecked || sample.techanicianChecked"
+            [title]="sample.qualityChecked ? 'Cannot edit - QA approved' : 'Edit general information'">
             ✏️ Edit Info
           </button>
-          <button class="action-btn result-btn" (click)="editSampleResult(sample)">
+          
+          <!-- Update Result Button: Disabled only if QA approved -->
+          <button 
+            class="action-btn result-btn" 
+            (click)="editSampleResult(sample)"
+              [disabled]="sample.qualityChecked || sample.techanicianChecked"
+            [title]="sample.qualityChecked ? 'Cannot edit - QA approved' : 'Update sample result'">
             📊 Update Result
           </button>
-          <button
-            class="action-btn forward-btn"
-            (click)="forwardToTechnician(sample)"
-            [disabled]="sample.techanicianChecked"
-            [title]="sample.techanicianChecked ? 'Already forwarded' : 'Forward to technician'">
-            📤 {{ sample.techanicianChecked ? 'Forwarded ✓' : 'Forward' }}
-          </button>
+          
+          <!-- Send Back Button: Enabled if techanicianChecked=true AND qualityChecked=false -->
+        <button
+  class="action-btn sendback-btn"
+  (click)="sendBackToAnalyst(sample)"
+  [disabled]="sample.qualityChecked || sample.techanicianChecked">
+  ↩️ Send Back
+</button>
+
+          <!-- Forward to QA Button: Enabled if techanicianChecked=true AND qualityChecked=false -->
+   
+         <button
+  class="action-btn forward-btn"
+  (click)="forwardToQualityCheck(sample)"
+   [disabled]="sample.qualityChecked || sample.techanicianChecked">
+  ✅ Forward to QA
+</button>
         </div>
 
       </div><!-- /.result-card -->
@@ -258,11 +275,11 @@
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showEditModal" (click)="closeModal()">
   <div class="modal-content large" (click)="$event.stopPropagation()">
-    <app-analyst-general-info
+    <app-techanician-general-info
       [sample]="selectedSample"
       (onClose)="closeModal()"
       (onUpdate)="onSearch()">
-    </app-analyst-general-info>
+    </app-techanician-general-info>
   </div>
 </div>
 
@@ -271,26 +288,63 @@
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showResultModal" (click)="closeModal()">
   <div class="modal-content large" (click)="$event.stopPropagation()">
-    <app-analyst-sample-result
+    <app-technician-sample-result
       [sample]="selectedSample"
       (onClose)="closeModal()"
       (onUpdate)="onSearch()">
-    </app-analyst-sample-result>
+    </app-technician-sample-result>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<!-- MODAL: Forward to Technician -->
+<!-- MODAL: Send Back to Analyst -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" *ngIf="showForwardModal" (click)="closeModal()">
+<div class="modal-overlay" *ngIf="showSendBackModal" (click)="closeModal()">
   <div class="modal-content small" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>📤 Forward to Technician</h3>
+      <h3>↩️ Send Back to Analyst</h3>
       <button class="close-btn" (click)="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p class="confirmation-text">
-        ✅ Forward this sample to the technician for review and processing?
+      <p class="confirmation-text warning">
+        ⚠️ This will return the sample to the analyst for revision.
+      </p>
+      <div class="sample-info-box">
+        <div class="confirm-row">
+          <span class="confirm-label">Report Number</span>
+          <span class="confirm-value">{{ selectedSample?.reportNumber }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Sample No.</span>
+          <span class="confirm-value">{{ selectedSample?.sampleNumber }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Description</span>
+          <span class="confirm-value">{{ selectedSample?.sampleDescription }}</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-btn" (click)="closeModal()">Cancel</button>
+        <button class="confirm-btn warning" (click)="confirmSendBackToAnalyst()">
+          ↩️ Confirm Send Back
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: Forward to Quality Check -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showQualityCheckModal" (click)="closeModal()">
+  <div class="modal-content small" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>✅ Forward to Quality Check</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirmation-text success">
+        ✅ Ready to forward this sample to Quality Assurance?
       </p>
       <div class="sample-info-box">
         <div class="confirm-row">
@@ -312,7 +366,9 @@
       </div>
       <div class="modal-actions">
         <button class="cancel-btn" (click)="closeModal()">Cancel</button>
-        <button class="confirm-btn" (click)="confirmForward()">✅ Confirm Forward</button>
+        <button class="confirm-btn success" (click)="confirmForwardToQualityCheck()">
+          ✅ Confirm Forward to QA
+        </button>
       </div>
     </div>
   </div>
