@@ -129,6 +129,7 @@ export class SampleDashboard implements OnInit, OnDestroy {
     // Process samples for display
     const dashboardSamples = samples.map(sample => this.mapToDashboardSample(sample));
     
+    
     // Sort by date (most recent first)
     dashboardSamples.sort((a, b) => {
       const dateA = new Date(a.collectionDate).getTime();

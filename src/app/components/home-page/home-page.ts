@@ -16,4 +16,10 @@ export class HomePage {
     this.router.navigate(['/sample/login']);
 
 }
+
+goToAnalystLogin(){
+   this.router.navigate(['/analyst/login']);
+
+
+}
 }

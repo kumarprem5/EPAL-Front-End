@@ -1,6 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+
+
 export interface SampleDescriptionRequest {
   sampleDescription: string;
 }
@@ -11,7 +13,7 @@ export interface TestParameter {
   values?: string;
 }
 
-export interface SampleFilterRequest {
+export interface SampleFilterRequest {  
   page: number;
   size: number;
   fromDate?: string;
@@ -71,12 +73,13 @@ export interface SampleResult {
   updatedAt?: string;
 }
 
+
 @Injectable({
   providedIn: 'root',
 })
-export class SampleService {
-
-   private baseUrl = 'http://localhost:8080/api/collector/samples';
+export class AnalystSampleService {
+  
+   private baseUrl = 'http://localhost:8080/api/analyst';
 
   constructor(private http: HttpClient) {}
 
@@ -89,7 +92,6 @@ export class SampleService {
       })
     };
   }
-
   getAllSamples(filter: SampleFilterRequest): Observable<ApiResponse<PageResponse>> {
     console.log('Fetching samples with filter:', filter);
     return this.http.post<ApiResponse<PageResponse>>(

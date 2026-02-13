@@ -16,13 +16,65 @@
     <h3 class="header-title">Project Details</h3>
 
     <div class="header-grid">
-      <div class="field"><span>Sample No</span>{{ sample.sampleNumber }}</div>
-      <div class="field highlight"><span>Date of Receiving</span>{{ sample.dateOfReceiving | date:'dd MMM yyyy' }}</div>
-      <div class="field"><span>Report No</span>{{ sample.reportNumber }}</div>
-      <div class="field"><span>Format No</span>{{ sample.formatNumber || 'N/A' }}</div>
-      <div class="field full"><span>Project Name</span>{{ sample.projectName || 'N/A' }}</div>
-      <div class="field full"><span>Address</span>{{ sample.address || 'N/A' }}</div>
-      <div class="field full"><span>Sample Description</span>{{ sample.sampleDescription }}</div>
+      <div class="field">
+        <span>Sample No</span>
+        {{ sample.sampleNumber }}
+      </div>
+
+      <div class="field highlight">
+        <span>Date of Receiving</span>
+        {{ sample.dateOfReceiving | date:'dd MMM yyyy' }}
+      </div>
+
+      <div class="field">
+        <span>Report No</span>
+        {{ sample.reportNumber }}
+      </div>
+
+      <div class="field">
+        <span>Format No</span>
+        {{ sample.formatNumber || 'N/A' }}
+      </div>
+
+      <div class="field">
+        <span>URL No</span>
+        {{ sample.urlNo || 'N/A' }}
+      </div>
+
+      <div class="field">
+        <span>Party Reference No</span>
+        {{ sample.partyReferenceNumber || 'N/A' }}
+      </div>
+
+      <div class="field">
+        <span>Reporting Date</span>
+        {{ sample.reportingDate | date:'dd MMM yyyy' }}
+      </div>
+
+      <div class="field full">
+        <span>Project Name</span>
+        {{ sample.projectName || 'N/A' }}
+      </div>
+
+      <div class="field full">
+        <span>Address</span>
+        {{ sample.address || 'N/A' }}
+      </div>
+
+      <div class="field full">
+        <span>Sample Description</span>
+        {{ sample.sampleDescription }}
+      </div>
+
+      <div class="field full">
+        <span>Period Of Analysis</span>
+        {{ sample.periodOfAnalysis || 'N/A' }}
+      </div>
+
+      <div class="field full">
+        <span>Sampling & Analysis Protocol</span>
+        {{ sample.samplingAndAnalysisProtocol || 'N/A' }}
+      </div>
     </div>
   </div>
 
@@ -32,9 +84,11 @@
   <div class="sample-description-banner" *ngIf="sample">
     <div class="banner-content">
       <div class="banner-icon">🔬</div>
-      <h2 class="sample-description">{{ sample.sampleDescription }}</h2>
+      <h2 class="sample-description">{{ sample.sampleDescription }} Test Report</h2>
     </div>
   </div>
+
+
 
 
   <!-- =========================
@@ -55,52 +109,44 @@
     <!-- Add Form -->
     <div class="add-form">
 
-  <!-- Parameter dropdown -->
-  <!-- Parameter dropdown -->
-<div class="input-group">
-  <label>Parameter Name</label>
+      <!-- Parameter dropdown -->
+      <div class="input-group">
+        <label>Parameter Name</label>
+        <select
+          class="form-input"
+          [ngModel]="selectedParameter"
+          (ngModelChange)="onParameterSelect($event)"
+        >
+          <option [ngValue]="null" disabled>
+            -- Select Parameter --
+          </option>
+          <option *ngFor="let p of testParameters" [ngValue]="p">
+            {{ p.parameterName }}
+          </option>
+        </select>
+      </div>
 
-  <select
-    class="form-input"
-    [ngModel]="selectedParameter"
-    (ngModelChange)="onParameterSelect($event)"
-  >
-    <option [ngValue]="null" disabled>
-      -- Select Parameter --
-    </option>
+      <!-- Value input -->
+      <div class="input-group">
+        <label>Value</label>
+        <input
+          type="text"
+          class="form-input"
+          placeholder="Enter value"
+          [(ngModel)]="newInfo.value"
+        />
+      </div>
 
-    <option
-      *ngFor="let p of testParameters"
-      [ngValue]="p"
-    >
-      {{ p.parameterName }}
-    </option>
-  </select>
-</div>
+      <button
+        class="btn-add"
+        (click)="addInformation()"
+        [disabled]="!newInfo.name || !newInfo.value"
+      >
+        <span class="btn-icon">➕</span>
+        Add Entry
+      </button>
 
-
-  <!-- Value input -->
-  <div class="input-group">
-    <label>Value</label>
-    <input
-      type="text"
-      class="form-input"
-      placeholder="Enter value"
-      [(ngModel)]="newInfo.value"
-    />
-  </div>
-
-  <button
-    class="btn-add"
-    (click)="addInformation()"
-    [disabled]="!newInfo.name || !newInfo.value"
-  >
-    <span class="btn-icon">➕</span>
-    Add Entry
-  </button>
-
-</div>
-
+    </div>
 
     <!-- Loading State -->
     <div class="loading-spinner" *ngIf="isLoadingInfo">
@@ -145,7 +191,7 @@
           <td class="action-cell">
             <button (click)="updateInformation(info)" class="btn-save">
               <span class="btn-icon">💾</span>
-              Save
+              Update
             </button>
             <button (click)="removeInformation(info, i)" class="btn-remove">
               <span class="btn-icon">🗑️</span>
@@ -157,4 +203,251 @@
     </table>
   </div>
 
+
+  <!-- =========================
+       PARAMETER MANAGEMENT SECTION
+  ========================= -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="header-left">
+        <div class="section-icon">🎯</div>
+        <h3>Parameter Management</h3>
+      </div>
+      <div class="badge" *ngIf="resultParameters.length > 0">
+        {{ resultParameters.length }} Parameters
+      </div>
+    </div>
+
+    <!-- Cascading Dropdowns (ONLY 3 - REMOVED Result Parameter dropdown) -->
+    <div class="cascading-selectors">
+      
+      <!-- Master Category -->
+      <div class="input-group">
+        <label>
+          <span class="label-icon">📁</span>
+          Master Category
+        </label>
+        <select
+          class="form-input cascade-select"
+          [ngModel]="selectedMasterCategory"
+          (ngModelChange)="onMasterCategoryChange($event)"
+          [disabled]="isLoadingMasterCategories"
+        >
+          <option [ngValue]="null" disabled>
+            {{ isLoadingMasterCategories ? 'Loading...' : '-- Select Master Category --' }}
+          </option>
+          <option *ngFor="let mc of masterCategories" [ngValue]="mc">
+            {{ mc.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- SubCategory -->
+      <div class="input-group">
+        <label>
+          <span class="label-icon">📂</span>
+          SubCategory
+        </label>
+        <select
+          class="form-input cascade-select"
+          [(ngModel)]="selectedSubCategory"
+          (ngModelChange)="onSubCategoryChange($event)"
+          [compareWith]="compareSubCategory"
+          [disabled]="!selectedMasterCategory || isLoadingSubCategories"
+        >
+          <option [ngValue]="null" disabled>
+            {{ isLoadingSubCategories ? 'Loading...' : '-- Select SubCategory --' }}
+          </option>
+          <option *ngFor="let sc of subCategories" [ngValue]="sc">
+            {{ sc.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Parameter Group -->
+      <div class="input-group">
+        <label>
+          <span class="label-icon">📊</span>
+          Parameter Group
+        </label>
+        <select
+          class="form-input cascade-select"
+          [ngModel]="selectedParameterGroup"
+          (ngModelChange)="onParameterGroupChange($event)"
+          [disabled]="!selectedSubCategory || isLoadingParameterGroups"
+        >
+          <option [ngValue]="null" disabled>
+            {{ isLoadingParameterGroups ? 'Loading...' : '-- Select Parameter Group --' }}
+          </option>
+          <option *ngFor="let pg of parameterGroups" [ngValue]="pg">
+            {{ pg.name }}
+          </option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Available Parameters Table (for selection) -->
+    <div class="parameters-table-wrapper" *ngIf="resultParameters.length > 0">
+      <h4 class="table-title">
+        <span class="title-icon">📋</span>
+        Available Parameters for: <strong>{{ selectedParameterGroup?.name }}</strong>
+      </h4>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-sno">S.No</th>
+            <th>Parameter Name</th>
+            <th>Unit</th>
+            <th>Result (Min)</th>
+            <th>Standard (Max)</th>
+            <th>Protocol (Desc)</th>
+            <th class="col-status">NABL</th>
+            <th class="col-actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let param of resultParameters; let i = index" class="data-row">
+            <td class="sno-cell">{{ i + 1 }}</td>
+            <td class="param-name-cell">
+              {{ param.parameterName }}
+            </td>
+            <td class="unit-cell">
+              {{ param.unit || '-' }}
+            </td>
+            <td class="value-cell">
+              {{ param.minValue || '-' }}
+            </td>
+            <td class="value-cell">
+              {{ param.maxValue || '-' }}
+            </td>
+            <td class="description-cell">
+              {{ param.description || '-' }}
+            </td>
+            <td class="status-cell">
+              <span class="nabl-badge" [class.active]="param.isNBL">
+                {{ param.isNBL ? '✓' : '✗' }}
+              </span>
+            </td>
+            <td class="action-cell">
+              <button (click)="selectResultParameter(param)" class="btn-select">
+                <span class="btn-icon">✓</span>
+                Select
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State for Parameters -->
+    <div class="empty-state" *ngIf="selectedParameterGroup && resultParameters.length === 0 && !isLoadingResultParameters">
+      <div class="empty-icon">📊</div>
+      <h4>No Parameters Available</h4>
+      <p>No parameters found for this group</p>
+    </div>
+
+  </div>
+
+  <!-- =========================
+       SELECTED PARAMETERS SECTION (NEW)
+  ========================= -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="header-left">
+        <div class="section-icon">✅</div>
+        <h3>Selected Parameters</h3>
+      </div>
+      <div class="badge" *ngIf="selectedSampleResults.length > 0">
+        {{ selectedSampleResults.length }} Selected
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-spinner" *ngIf="isLoadingSampleResults">
+      <div class="spinner"></div>
+      <p>Loading selected parameters...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoadingSampleResults && selectedSampleResults.length === 0">
+      <div class="empty-icon">📝</div>
+      <h4>No Parameters Selected</h4>
+      <p>Select parameters from the Available Parameters table above</p>
+    </div>
+
+    <!-- Selected Parameters Table -->
+    <table class="data-table" *ngIf="!isLoadingSampleResults && selectedSampleResults.length > 0">
+      <thead>
+        <tr>
+          <th class="col-sno">S.No</th>
+          <th>Parameter Name</th>
+          <th>Unit</th>
+          <th>Result</th>
+          <th>Standard</th>
+          <th>Protocol</th>
+          <th class="col-status">NABL</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let result of selectedSampleResults; let i = index" class="data-row">
+          <td class="sno-cell">{{ i + 1 }}</td>
+          <td>
+            <input 
+              [(ngModel)]="result.name" 
+              class="editable-input"
+              placeholder="Parameter name"
+            />
+          </td>
+          <td>
+            <input 
+              [(ngModel)]="result.unit" 
+              class="unit-input"
+              placeholder="Unit"
+            />
+          </td>
+          <td>
+            <input 
+              [(ngModel)]="result.result" 
+              class="editable-input"
+              placeholder="Result"
+            />
+          </td>
+          <td>
+            <input 
+              [(ngModel)]="result.standarded" 
+              class="editable-input"
+              placeholder="Standard"
+            />
+          </td>
+          <td>
+            <input 
+              [(ngModel)]="result.protocal" 
+              class="editable-input"
+              placeholder="Protocol"
+            />
+          </td>
+          <td class="status-cell">
+            <input
+              type="checkbox"
+              [(ngModel)]="result.isNABL"
+              class="status-checkbox"
+            />
+          </td>
+          <td class="action-cell">
+            <button (click)="updateSampleResult(result)" class="btn-save">
+              <span class="btn-icon">💾</span>
+              Update
+            </button>
+            <button (click)="deleteSampleResult(result, i)" class="btn-remove">
+              <span class="btn-icon">🗑️</span>
+              Remove
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>

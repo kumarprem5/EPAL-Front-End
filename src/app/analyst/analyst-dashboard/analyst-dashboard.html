@@ -1,0 +1,327 @@
+<div class="dashboard-container">
+
+  <!-- ════════════════════════════════
+       HEADER
+       ════════════════════════════════ -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">🔬</span>
+          <span class="logo-text">Lab Analyst Portal</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="user-info">
+          <span class="user-icon">👤</span>
+          <span class="user-name">{{ currentUser?.analystName || 'Analyst' }}</span>
+        </div>
+        <button class="logout-btn" (click)="logout()">
+          <span>🚪</span> Logout
+        </button>
+      </div>
+    </div>
+  </header>
+  <!-- ════════════════════════════════
+       GLOBAL LOADING OVERLAY
+       ════════════════════════════════ -->
+  <div class="global-loading" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- ════════════════════════════════
+       STATS
+       ════════════════════════════════ -->
+  <section class="stats-section">
+    <div class="stats-grid">
+
+      <div class="stat-card">
+        <div class="stat-icon pending">📋</div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.pendingAnalysis }}</div>
+          <div class="stat-label">Pending Analysis</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon completed">✅</div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.completedToday }}</div>
+          <div class="stat-label">Completed Today</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon forwarded">📤</div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.forwardedToTechnician }}</div>
+          <div class="stat-label">Forwarded to Technician</div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon total">📊</div>
+        <div class="stat-content">
+          <div class="stat-number">{{ stats.totalProcessed }}</div>
+          <div class="stat-label">Total Processed</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════
+       SEARCH
+       ════════════════════════════════ -->
+  <section class="search-section">
+    <div class="section-header">
+      <h2 class="section-title">Search Reports</h2>
+      <p class="section-subtitle">Find samples by report number, company name, or sample ID</p>
+    </div>
+
+    <div class="search-tabs">
+      <button class="search-tab" [class.active]="searchType === 'reportNumber'" (click)="onSearchTypeChange('reportNumber')">
+        📄 Report Number
+      </button>
+      <button class="search-tab" [class.active]="searchType === 'companyName'" (click)="onSearchTypeChange('companyName')">
+        🏢 Company Name
+      </button>
+      <button class="search-tab" [class.active]="searchType === 'sampleId'" (click)="onSearchTypeChange('sampleId')">
+        🔢 Sample ID
+      </button>
+    </div>
+
+    <form [formGroup]="searchForm" (ngSubmit)="onSearch()" class="search-form">
+      <div class="search-input-wrapper">
+        <input
+          type="text"
+          formControlName="searchValue"
+          class="search-input"
+          [placeholder]="searchType === 'reportNumber' ? 'e.g. RPT-2026-001'
+                       : searchType === 'companyName'  ? 'e.g. Acme Industries'
+                       : 'e.g. 42'"
+        />
+        <button type="submit" class="search-btn" [disabled]="loading">
+          <span *ngIf="!loading">🔍 Search</span>
+          <span *ngIf="loading" class="spinner"></span>
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ════════════════════════════════
+       RESULTS
+       ════════════════════════════════ -->
+  <section class="results-section" *ngIf="hasSearched && searchResults.length > 0">
+    <div class="results-header">
+      <h2 class="section-title">Search Results</h2>
+      <span class="results-count">{{ searchResults.length }} result(s) found</span>
+    </div>
+
+    <div class="results-grid">
+      <div class="result-card" *ngFor="let sample of searchResults">
+
+        <!-- ── Card Header ── -->
+        <div class="result-header">
+          <div class="result-badge">{{ sample.reportNumber || '—' }}</div>
+          <!-- Status derived from fordwardToTechanician & qualityChecked -->
+          <div class="result-status" [ngClass]="getSampleStatusClass(sample)">
+            {{ getSampleStatus(sample) }}
+          </div>
+        </div>
+
+        <!-- ── Card Body ── -->
+        <div class="result-body">
+          <div class="result-info-grid">
+
+            <div class="info-item">
+              <span class="info-label">🆔 Sample ID: </span>
+              <span class="info-value">{{ sample.id ?? '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">🔢 Sample No. :</span>
+              <span class="info-value">{{ sample.sampleNumber || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📝 Description: </span>
+              <span class="info-value">{{ sample.sampleDescription || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📦 Project: </span>
+              <span class="info-value">{{ sample.projectName || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📋 Format No.: </span>
+              <span class="info-value">{{ sample.formatNumber || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">🔗 Party Ref.: </span>
+              <span class="info-value">{{ sample.partyReferenceNumber || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📅 Date Received: </span>
+              <span class="info-value">{{ sample.dateOfReceiving ? (sample.dateOfReceiving | date:'dd MMM yyyy') : '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📅 Reporting Date: </span>
+              <span class="info-value">{{ sample.reportingDate ? (sample.reportingDate | date:'dd MMM yyyy') : '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">⏱️ Analysis Period: </span>
+              <span class="info-value">{{ sample.periodOfAnalysis || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">🔬 Protocol: </span>
+              <span class="info-value">{{ sample.samplingAndAnalysisProtocol || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">📍 Address: </span>
+              <span class="info-value">{{ sample.address || '—' }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">🕐 Created: </span>
+              <span class="info-value">{{ sample.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+            </div>
+
+            <!-- ✅ Real boolean fields from backend -->
+            <div class="info-item">
+              <span class="info-label">🔧 Review: </span>
+              <span class="info-value">
+                <span class="pill" [ngClass]="sample.fordwardToTechanician ? 'pill-yes' : 'pill-no'">
+                  {{ sample.fordwardToTechanician ? 'Forwarded' : 'Pending' }}
+                </span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">✅ QA Check: </span>
+              <span class="info-value">
+                <span class="pill" [ngClass]="sample.qualityChecked ? 'pill-yes' : 'pill-no'">
+                  {{ sample.qualityChecked ? 'Approved' : 'Pending' }}
+                </span>
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── Card Actions ── -->
+        <div class="result-actions">
+          <button class="action-btn edit-btn" (click)="editGeneralInformation(sample)">
+            ✏️ Edit Info
+          </button>
+          <button class="action-btn result-btn" (click)="editSampleResult(sample)">
+            📊 Update Result
+          </button>
+          <button
+            class="action-btn forward-btn"
+            (click)="forwardToTechnician(sample)"
+            [disabled]="sample.fordwardToTechanician"
+            [title]="sample.fordwardToTechanician ? 'Already forwarded' : 'Forward to technician'">
+            📤 {{ sample.fordwardToTechanician ? 'Forwarded ✓' : 'Forward' }}
+          </button>
+        </div>
+
+      </div><!-- /.result-card -->
+    </div><!-- /.results-grid -->
+  </section>
+
+  <!-- ════════════════════════════════
+       NO RESULTS — only after search
+       ════════════════════════════════ -->
+  <div class="no-results" *ngIf="hasSearched && searchResults.length === 0 && !loading">
+    <div class="no-results-icon">🔍</div>
+    <h3>No Results Found</h3>
+    <p>
+      No sample matched the
+      <strong>{{ searchType === 'reportNumber' ? 'report number' : searchType === 'companyName' ? 'company name' : 'sample ID' }}</strong>
+      you entered.
+    </p>
+  </div>
+
+</div><!-- /.dashboard-container -->
+
+
+<!-- ════════════════════════════════
+     MODAL: Edit General Information
+     ════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>✏️ Edit General Information</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <app-analyst-general-info
+      [sample]="selectedSample"
+      (onClose)="closeModal()"
+      (onUpdate)="onSearch()">
+    </app-analyst-general-info>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: Update Sample Result
+     ════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showResultModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📊 Update Sample Result</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <app-analyst-sample-result
+      [sample]="selectedSample"
+      (onClose)="closeModal()"
+      (onUpdate)="onSearch()">
+    </app-analyst-sample-result>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     MODAL: Forward Confirmation
+     ════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showForwardModal" (click)="closeModal()">
+  <div class="modal-content small" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📤 Forward to Review Sample (TM)</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirmation-text">
+        Forward this sample to the review for further processing?
+      </p>
+      <div class="sample-info-box">
+        <div class="confirm-row">
+          <span class="confirm-label">Report Number</span>
+          <span class="confirm-value">{{ selectedSample?.reportNumber }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Sample No.</span>
+          <span class="confirm-value">{{ selectedSample?.sampleNumber }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Description</span>
+          <span class="confirm-value">{{ selectedSample?.sampleDescription }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">Project</span>
+          <span class="confirm-value">{{ selectedSample?.projectName || '—' }}</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-btn" (click)="closeModal()">Cancel</button>
+        <button class="confirm-btn" (click)="confirmForward()">✅ Confirm Forward</button>
+      </div>
+    </div>
+  </div>
+</div>

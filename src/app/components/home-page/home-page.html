@@ -1,45 +1,176 @@
 <app-header></app-header>
-
 <section class="home-container">
-  <h1 class="title">Laboratory Management System</h1>
-  <p class="subtitle">
-    Secure, efficient, and role-based access for laboratory operations
-  </p>
-
-  <!-- Cards Grid -->
-  <div class="card-grid">
-
-    <!-- Sample Register -->
-    <div class="role-card">
-      <div class="icon">🧾</div>
-      <h3>Sample Register</h3>
-      <p>Register and track incoming lab samples efficiently.</p>
-      <button (click)="goToSampleLogin()">Login</button>
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <div class="badge">
+        <span class="pulse-dot"></span>
+        EPA Labs Private Limited
+      </div>
+      <h1 class="title">Laboratory Management System</h1>
+      <p class="subtitle">
+        Streamline your lab operations with secure, intelligent, and role-based workflow management
+      </p>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-number">99.9%</div>
+          <div class="stat-label">Accuracy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">24/7</div>
+          <div class="stat-label">Support</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">500+</div>
+          <div class="stat-label">Labs Trust Us</div>
+        </div>
+      </div>
     </div>
-
-    <!-- Analyst -->
-    <div class="role-card">
-      <div class="icon">🔬</div>
-      <h3>Analyst</h3>
-      <p>Perform testing, analysis, and result validation.</p>
-      <button>Login</button>
+    <div class="hero-image">
+      <div class="floating-card card-1">
+        <div class="mini-icon">📊</div>
+        <span>Real-time Analytics</span>
+      </div>
+      <div class="floating-card card-2">
+        <div class="mini-icon">🔒</div>
+        <span>Secure Data</span>
+      </div>
+      <div class="floating-card card-3">
+        <div class="mini-icon">⚡</div>
+        <span>Fast Processing</span>
+      </div>
+      <img src="https://images.unsplash.com/photo-1582719471137-c3967ffb1c42?w=600&h=600&fit=crop" alt="Laboratory" class="lab-image">
     </div>
+  </div>
 
-    <!-- Technician -->
-    <div class="role-card">
-      <div class="icon">⚙️</div>
-      <h3>Technician</h3>
-      <p>Handle instruments, preparation, and sample processing.</p>
-      <button>Login</button>
+  <!-- Role Cards Section -->
+  <div class="roles-section">
+    <h2 class="section-title">Access Your Dashboard</h2>
+    <p class="section-subtitle">Choose your role to continue</p>
+    
+    <div class="card-grid">
+      <!-- Sample Register -->
+      <div class="role-card" (click)="goToSampleLogin()">
+        <div class="card-header">
+          <div class="icon-wrapper">
+            <div class="icon">🧾</div>
+            <div class="icon-bg"></div>
+          </div>
+          <span class="badge-new">Active</span>
+        </div>
+        <h3>Sample Registration</h3>
+        <p>Register and track incoming lab samples with barcode scanning and automated workflows.</p>
+        <ul class="feature-list">
+          <li>✓ Barcode Integration</li>
+          <li>✓ Sample Tracking</li>
+          <li>✓ Auto Notifications</li>
+        </ul>
+        <button class="login-btn">
+          <span>Access Dashboard</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Analyst -->
+      <div class="role-card"  (click)="goToAnalystLogin()" >
+        <div class="card-header">
+          <div class="icon-wrapper">
+            <div class="icon">🔬</div>
+            <div class="icon-bg"></div>
+          </div>
+          <span class="badge-new">Active</span>
+        </div>
+        <h3>Sample Analysis</h3>
+        <p>Perform comprehensive testing, analysis, and result validation with AI-powered insights.</p>
+        <ul class="feature-list">
+          <li>✓ Advanced Analytics</li>
+          <li>✓ Result Validation</li>
+          <li>✓ Report Generation</li>
+        </ul>
+        <button class="login-btn">
+          <span>Access Dashboard</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Technician -->
+      <div class="role-card">
+        <div class="card-header">
+          <div class="icon-wrapper">
+            <div class="icon">⚙️</div>
+            <div class="icon-bg"></div>
+          </div>
+          <span class="badge-new">Active</span>
+        </div>
+        <h3>Review Sample (TM) </h3>
+        <p>Manage instruments, sample preparation, and processing with real-time equipment monitoring.</p>
+        <ul class="feature-list">
+          <li>✓ Equipment Control</li>
+          <li>✓ Maintenance Logs</li>
+          <li>✓ Sample Processing</li>
+        </ul>
+        <button class="login-btn">
+          <span>Access Dashboard</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Quality Officer -->
+      <div class="role-card">
+        <div class="card-header">
+          <div class="icon-wrapper">
+            <div class="icon">✅</div>
+            <div class="icon-bg"></div>
+          </div>
+          <span class="badge-new">Active</span>
+        </div>
+        <h3>Approval (Signing Authority)</h3>
+        <p>Ensure compliance, conduct audits, and manage approvals with comprehensive quality controls.</p>
+        <ul class="feature-list">
+          <li>✓ Compliance Tracking</li>
+          <li>✓ Audit Management</li>
+          <li>✓ Quality Reports</li>
+        </ul>
+        <button class="login-btn">
+          <span>Access Dashboard</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M5 12h14M12 5l7 7-7 7" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
+  </div>
 
-    <!-- Quality Officer -->
-    <div class="role-card">
-      <div class="icon">✅</div>
-      <h3>Quality Officer</h3>
-      <p>Ensure compliance, audit results, and approvals.</p>
-      <button>Login</button>
+  <!-- Features Section -->
+  <div class="features-section">
+    <h2 class="section-title">Why Choose Our System?</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h4>Enterprise Security</h4>
+        <p>Bank-grade encryption and role-based access control</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <h4>Real-Time Analytics</h4>
+        <p>Instant insights and performance metrics</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h4>Seamless Integration</h4>
+        <p>Connect with existing lab equipment and systems</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☁️</div>
+        <h4>Cloud-Based</h4>
+        <p>Access from anywhere, anytime with 99.9% uptime</p>
+      </div>
     </div>
-
   </div>
 </section>

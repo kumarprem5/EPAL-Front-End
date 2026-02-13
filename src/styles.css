@@ -1,25 +1,25 @@
 /* You can add global styles to this file, and also import other style files */
 /* =========================
-   DARK THEME VARIABLES
+   LIGHT THEME VARIABLES
    ========================= */
 :root {
   --primary-color: #4CAF50;
-  --hover-color: #66BB6A;
+  --hover-color: #45a049;
 }
 
-/* Dark Theme */
-.dark-theme {
-  --bg-color: #0f172a;
-  --secondary-bg: #020617;
-  --card-bg: #020617;
-  --border-color: #1e293b;
-  --text-color: #e5e7eb;
-  --muted-text: #9ca3af;
-  --shadow-color: rgba(0, 0, 0, 0.6);
+/* Light Theme */
+.light-theme {
+  --bg-color: #f8fafc;
+  --secondary-bg: #ffffff;
+  --card-bg: #ffffff;
+  --border-color: #e2e8f0;
+  --text-color: #1e293b;
+  --muted-text: #64748b;
+  --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 
-/* Global Styles - Dark Theme */
+/* Global Styles - Light Theme */
 * {
   margin: 0;
   padding: 0;
@@ -28,17 +28,17 @@
 
 :root {
   --primary-color: #4CAF50;
-  --bg-color: #0F1419;
-  --text-color: #E8EAED;
-  --card-bg: #1A1F2E;
-  --hover-color: #66BB6A;
-  --border-color: #2D3748;
+  --bg-color: #f8fafc;
+  --text-color: #1e293b;
+  --card-bg: #ffffff;
+  --hover-color: #45a049;
+  --border-color: #e2e8f0;
   --success: #4CAF50;
   --warning: #FF9800;
   --info: #2196F3;
-  --secondary-bg: #151B23;
-  --muted-text: #9CA3AF;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --secondary-bg: #ffffff;
+  --muted-text: #64748b;
+  --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -73,18 +73,18 @@ button {
   font-family: inherit;
 }
 
-/* Scrollbar Styling for Dark Theme */
+/* Scrollbar Styling for Light Theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--secondary-bg);
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
