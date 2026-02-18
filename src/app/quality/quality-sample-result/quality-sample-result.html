@@ -1,0 +1,309 @@
+<div class="sample-result-container">
+  
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="sr-header">
+    <div class="sr-header-content">
+      <h3 class="sr-title">📊 Sample Results</h3>
+      <div class="sr-subtitle">
+        <span class="sr-report-badge">{{ sample?.reportNumber }}</span>
+        <span class="sr-sample-badge">{{ sample?.sampleDescription }}</span>
+      </div>
+    </div>
+    <button class="btn-close-header" (click)="close()" title="Close">✕</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- LOADING STATE -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="sr-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading results...</p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="sr-content" *ngIf="!loading">
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- ACTIONS BAR -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="sr-actions-bar">
+      <button 
+        class="btn-add-new" 
+        (click)="toggleAddForm()"
+        [class.active]="showAddForm">
+        <span>{{ showAddForm ? '✕ Cancel' : '➕ Add New Result' }}</span>
+      </button>
+      <button class="btn-refresh" (click)="refresh()" title="Refresh">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- ADD NEW FORM -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="sr-add-form-wrapper" *ngIf="showAddForm">
+      <form [formGroup]="addForm" (ngSubmit)="addNewItem()" class="sr-add-form">
+        <div class="form-header">
+          <h4>➕ Add New Result</h4>
+        </div>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="add-name">Parameter Name *</label>
+            <input
+              id="add-name"
+              type="text"
+              formControlName="name"
+              class="form-input"
+              placeholder="e.g., pH, Temperature, Turbidity"
+              [class.invalid]="addForm.get('name')?.touched && addForm.get('name')?.invalid"
+            />
+            <span class="error-text" *ngIf="addForm.get('name')?.touched && addForm.get('name')?.hasError('required')">
+              Parameter name is required
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="add-unit">Unit *</label>
+            <input
+              id="add-unit"
+              type="text"
+              formControlName="unit"
+              class="form-input"
+              placeholder="e.g., mg/L, °C, NTU"
+              [class.invalid]="addForm.get('unit')?.touched && addForm.get('unit')?.invalid"
+            />
+            <span class="error-text" *ngIf="addForm.get('unit')?.touched && addForm.get('unit')?.hasError('required')">
+              Unit is required
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="add-result">Result *</label>
+            <input
+              id="add-result"
+              type="text"
+              formControlName="result"
+              class="form-input"
+              placeholder="e.g., 7.2, 25.5, < 1.0"
+              [class.invalid]="addForm.get('result')?.touched && addForm.get('result')?.invalid"
+            />
+            <span class="error-text" *ngIf="addForm.get('result')?.touched && addForm.get('result')?.hasError('required')">
+              Result is required
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="add-protocal">Protocol</label>
+            <input
+              id="add-protocal"
+              type="text"
+              formControlName="protocal"
+              class="form-input"
+              placeholder="e.g., IS 3025 (Part 11)"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="add-standarded">Standard</label>
+            <input
+              id="add-standarded"
+              type="text"
+              formControlName="standarded"
+              class="form-input"
+              placeholder="e.g., 6.5 - 8.5"
+            />
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                formControlName="isNABL"
+                class="form-checkbox"
+              />
+              <span class="checkbox-text">NABL Accredited</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="toggleAddForm()">
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn-save" 
+            [disabled]="saving || addForm.invalid">
+            <span *ngIf="!saving">💾 Add Result</span>
+            <span *ngIf="saving" class="spinner-inline"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- RESULTS LIST -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="sr-items-list" *ngIf="sampleResultsList.length > 0">
+      <div class="list-header">
+        <h4>📄 Test Results ({{ sampleResultsList.length }})</h4>
+      </div>
+
+      <div class="sr-table">
+        <div class="sr-table-header">
+          <div class="sr-col sr-col-name">Parameter</div>
+          <div class="sr-col sr-col-result">Result</div>
+          <div class="sr-col sr-col-unit">Unit</div>
+          <div class="sr-col sr-col-protocol">Protocol</div>
+          <div class="sr-col sr-col-standard">Standard</div>
+          <div class="sr-col sr-col-nabl">NABL</div>
+          <div class="sr-col sr-col-actions">Actions</div>
+        </div>
+
+        <div class="sr-table-body">
+          <div class="sr-row" *ngFor="let item of sampleResultsList; let i = index">
+            
+            <!-- ──── VIEW MODE ──── -->
+            <ng-container *ngIf="!isEditing(item)">
+              <div class="sr-col sr-col-name">
+                <div class="field-name-display">
+                  <span class="field-icon">🧪</span>
+                  <span class="field-text">{{ item.name }}</span>
+                </div>
+              </div>
+              <div class="sr-col sr-col-result">
+                <div class="result-value">{{ item.result }}</div>
+              </div>
+              <div class="sr-col sr-col-unit">
+                <span class="unit-badge">{{ item.unit }}</span>
+              </div>
+              <div class="sr-col sr-col-protocol">
+                <span class="protocol-text">{{ item.protocal || '—' }}</span>
+              </div>
+              <div class="sr-col sr-col-standard">
+                <span class="standard-text">{{ item.standarded || '—' }}</span>
+              </div>
+              <div class="sr-col sr-col-nabl">
+                <span class="nabl-badge" [class.nabl-yes]="item.isNABL" [class.nabl-no]="!item.isNABL">
+                  {{ item.isNABL ? '✓ Yes' : '✕ No' }}
+                </span>
+              </div>
+              <div class="sr-col sr-col-actions">
+                <button 
+                  class="btn-icon btn-edit" 
+                  (click)="enableEdit(item)"
+                  title="Edit">
+                  ✏️
+                </button>
+                <button 
+                  class="btn-icon btn-delete" 
+                  (click)="deleteItem(item)"
+                  [disabled]="saving"
+                  title="Delete">
+                  🗑️
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- ──── EDIT MODE ──── -->
+            <ng-container *ngIf="isEditing(item) && getEditForm(item) as form">
+              <div class="sr-col sr-col-name" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="name"
+                  class="form-input-inline"
+                  placeholder="Parameter name"
+                  [class.invalid]="form.get('name')?.touched && form.get('name')?.invalid"
+                />
+              </div>
+              <div class="sr-col sr-col-result" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="result"
+                  class="form-input-inline"
+                  placeholder="Result"
+                  [class.invalid]="form.get('result')?.touched && form.get('result')?.invalid"
+                />
+              </div>
+              <div class="sr-col sr-col-unit" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="unit"
+                  class="form-input-inline"
+                  placeholder="Unit"
+                  [class.invalid]="form.get('unit')?.touched && form.get('unit')?.invalid"
+                />
+              </div>
+              <div class="sr-col sr-col-protocol" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="protocal"
+                  class="form-input-inline"
+                  placeholder="Protocol"
+                />
+              </div>
+              <div class="sr-col sr-col-standard" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="standarded"
+                  class="form-input-inline"
+                  placeholder="Standard"
+                />
+              </div>
+              <div class="sr-col sr-col-nabl" [formGroup]="form">
+                <label class="checkbox-label-inline">
+                  <input
+                    type="checkbox"
+                    formControlName="isNABL"
+                    class="form-checkbox-inline"
+                  />
+                  <span>NABL</span>
+                </label>
+              </div>
+              <div class="sr-col sr-col-actions">
+                <button 
+                  class="btn-icon btn-save-inline" 
+                  (click)="saveEdit(item)"
+                  [disabled]="saving"
+                  title="Save">
+                  ✅
+                </button>
+                <button 
+                  class="btn-icon btn-cancel-inline" 
+                  (click)="cancelEdit(item)"
+                  title="Cancel">
+                  ✕
+                </button>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- EMPTY STATE -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="sr-empty" *ngIf="sampleResultsList.length === 0 && !showAddForm">
+      <div class="empty-icon">📊</div>
+      <h4>No Test Results</h4>
+      <p>Click "Add New Result" to create the first entry</p>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- FOOTER -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="sr-footer">
+    <button class="btn-close-footer" (click)="close()">
+      Close
+    </button>
+  </div>
+
+</div>

@@ -7,14 +7,14 @@
     <div class="header-content">
       <div class="header-left">
         <div class="logo">
-          <span class="logo-icon">🔬</span>
-          <span class="logo-text">Lab Analyst Portal</span>
+          <span class="logo-icon">✅</span>
+          <span class="logo-text">Lab Quality Portal</span>
         </div>
       </div>
       <div class="header-right">
         <div class="user-info">
           <span class="user-icon">👤</span>
-          <span class="user-name">{{ currentUser?.analystName || 'Analyst' }}</span>
+          <span class="user-name">{{ currentUser?.qualityName || currentUser?.name || 'Quality Team' }}</span>
         </div>
         <button class="logout-btn" (click)="logout()">
           <span>🚪</span> Logout
@@ -22,6 +22,7 @@
       </div>
     </div>
   </header>
+
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <!-- GLOBAL LOADING OVERLAY -->
   <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -37,26 +38,26 @@
     <div class="stats-grid">
 
       <div class="stat-card">
-        <div class="stat-icon pending">📋</div>
+        <div class="stat-icon pending">⏳</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.pendingAnalysis }}</div>
-          <div class="stat-label">Pending Analysis</div>
+          <div class="stat-number">{{ stats.pendingQA }}</div>
+          <div class="stat-label">Pending QA</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon completed">✅</div>
+        <div class="stat-icon approved-today">📅</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.completedToday }}</div>
-          <div class="stat-label">Completed Today</div>
+          <div class="stat-number">{{ stats.approvedToday }}</div>
+          <div class="stat-label">Approved Today</div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon forwarded">📤</div>
+        <div class="stat-icon total-approved">✅</div>
         <div class="stat-content">
-          <div class="stat-number">{{ stats.forwardedToTechnician }}</div>
-          <div class="stat-label">Forwarded to Technician</div>
+          <div class="stat-number">{{ stats.totalApproved }}</div>
+          <div class="stat-label">Total Approved</div>
         </div>
       </div>
 
@@ -76,8 +77,8 @@
   <!-- ════════════════════════════════════════════════════════════════════════ -->
   <section class="search-section">
     <div class="section-header">
-      <h2 class="section-title">Search Reports</h2>
-      <p class="section-subtitle">Find samples by report number, company name, or sample ID</p>
+      <h2 class="section-title">Search Samples</h2>
+      <p class="section-subtitle">Find quality-ready samples by report number, company name, or sample ID</p>
     </div>
 
     <div class="search-tabs">
@@ -116,7 +117,7 @@
   <section class="results-section" *ngIf="hasSearched && searchResults.length > 0">
     <div class="results-header">
       <h2 class="section-title">Search Results</h2>
-      <span class="results-count">{{ searchResults.length }} result(s) found</span>
+      <span class="results-count">{{ searchResults.length }} result(s) found (sorted by latest)</span>
     </div>
 
     <div class="results-grid">
@@ -190,15 +191,15 @@
             </div>
 
             <div class="info-item">
-              <span class="info-label">🕐 Created</span>
-              <span class="info-value">{{ sample.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+              <span class="info-label">🕐 Last Updated</span>
+              <span class="info-value">{{ sample.updatedAt | date:'dd MMM yyyy, HH:mm' }}</span>
             </div>
 
             <div class="info-item">
               <span class="info-label">🔧 Tech Check</span>
               <span class="info-value">
                 <span class="pill" [ngClass]="sample.techanicianChecked ? 'pill-yes' : 'pill-no'">
-                  {{ sample.techanicianChecked ? 'Forwarded' : 'Pending' }}
+                  {{ sample.techanicianChecked ? 'Complete' : 'Pending' }}
                 </span>
               </span>
             </div>
@@ -217,18 +218,40 @@
 
         <!-- ── Card Actions ── -->
         <div class="result-actions">
-          <button class="action-btn edit-btn" (click)="editGeneralInformation(sample)">
+          <!-- Edit Info Button: Disabled if QA approved -->
+          <button 
+            class="action-btn edit-btn" 
+            (click)="editGeneralInformation(sample)"
+            [disabled]="sample.qualityChecked"
+            [title]="sample.qualityChecked ? 'Cannot edit - QA approved' : 'Edit general information'">
             ✏️ Edit Info
           </button>
-          <button class="action-btn result-btn" (click)="editSampleResult(sample)">
+          
+          <!-- Update Result Button: Disabled if QA approved -->
+          <button 
+            class="action-btn result-btn" 
+            (click)="editSampleResult(sample)"
+            [disabled]="sample.qualityChecked"
+            [title]="sample.qualityChecked ? 'Cannot edit - QA approved' : 'Update sample result'">
             📊 Update Result
           </button>
+          
+          <!-- Approve QA Button: Disabled if already approved -->
           <button
-            class="action-btn forward-btn"
-            (click)="forwardToTechnician(sample)"
-            [disabled]="sample.techanicianChecked"
-            [title]="sample.techanicianChecked ? 'Already forwarded' : 'Forward to technician'">
-            📤 {{ sample.techanicianChecked ? 'Forwarded ✓' : 'Forward' }}
+            class="action-btn approve-btn"
+            (click)="approveQuality(sample)"
+            [disabled]="sample.qualityChecked"
+            [title]="sample.qualityChecked ? 'Already approved' : 'Approve quality check'">
+            ✅ {{ sample.qualityChecked ? 'Approved ✓' : 'Approve QA' }}
+          </button>
+          
+          <!-- Print Report Button: Only visible if QA approved -->
+          <button
+            *ngIf="sample.qualityChecked"
+            class="action-btn print-btn"
+            (click)="printReport(sample)"
+            title="Print approved report">
+            🖨️ Print Report
           </button>
         </div>
 
@@ -243,10 +266,11 @@
     <div class="no-results-icon">🔍</div>
     <h3>No Results Found</h3>
     <p>
-      No sample matched the
+      No quality-ready sample matched the
       <strong>{{ searchType === 'reportNumber' ? 'report number' : searchType === 'companyName' ? 'company name' : 'sample ID' }}</strong>
       you entered.
     </p>
+    <p class="hint">💡 Only samples with technician check complete are shown here</p>
   </div>
 
 </div><!-- /.dashboard-container -->
@@ -257,11 +281,11 @@
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showEditModal" (click)="closeModal()">
   <div class="modal-content large" (click)="$event.stopPropagation()">
-    <app-analyst-general-info
+    <app-quality-general-info
       [sample]="selectedSample"
       (onClose)="closeModal()"
       (onUpdate)="onSearch()">
-    </app-analyst-general-info>
+    </app-quality-general-info>
   </div>
 </div>
 
@@ -270,26 +294,26 @@
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="modal-overlay" *ngIf="showResultModal" (click)="closeModal()">
   <div class="modal-content large" (click)="$event.stopPropagation()">
-    <app-analyst-sample-result
+    <app-quality-sample-result
       [sample]="selectedSample"
       (onClose)="closeModal()"
       (onUpdate)="onSearch()">
-    </app-analyst-sample-result>
+    </app-quality-sample-result>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<!-- MODAL: Forward to Technician -->
+<!-- MODAL: Approve Quality Check -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" *ngIf="showForwardModal" (click)="closeModal()">
+<div class="modal-overlay" *ngIf="showQualityCheckModal" (click)="closeModal()">
   <div class="modal-content small" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>📤 Forward to Technician</h3>
+      <h3>✅ Approve Quality Check</h3>
       <button class="close-btn" (click)="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <p class="confirmation-text">
-        ✅ Forward this sample to the technician for review and processing?
+      <p class="confirmation-text success">
+        ✅ Ready to approve this sample for final quality check?
       </p>
       <div class="sample-info-box">
         <div class="confirm-row">
@@ -309,9 +333,12 @@
           <span class="confirm-value">{{ selectedSample?.projectName || '—' }}</span>
         </div>
       </div>
+      <p class="warning-text">⚠️ Once approved, this sample cannot be edited.</p>
       <div class="modal-actions">
         <button class="cancel-btn" (click)="closeModal()">Cancel</button>
-        <button class="confirm-btn" (click)="confirmForward()">✅ Confirm Forward</button>
+        <button class="confirm-btn success" (click)="confirmQualityCheck()">
+          ✅ Confirm Approval
+        </button>
       </div>
     </div>
   </div>

@@ -1,0 +1,208 @@
+<div class="general-info-container">
+  
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="gi-header">
+    <div class="gi-header-content">
+      <h3 class="gi-title">📋 General Information</h3>
+      <div class="gi-subtitle">
+        <span class="gi-report-badge">{{ sample?.reportNumber }}</span>
+        <span class="gi-sample-badge">{{ sample?.sampleNumber }}</span>
+      </div>
+    </div>
+    <button class="btn-close-header" (click)="close()" title="Close">✕</button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- LOADING STATE -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="gi-loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading information...</p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="gi-content" *ngIf="!loading">
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- ADD NEW BUTTON -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="gi-actions-bar">
+      <button 
+        class="btn-add-new" 
+        (click)="toggleAddForm()"
+        [class.active]="showAddForm">
+        <span>{{ showAddForm ? '✕ Cancel' : '➕ Add New Field' }}</span>
+      </button>
+      <button class="btn-refresh" (click)="refresh()" title="Refresh">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- ADD NEW FORM -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="gi-add-form-wrapper" *ngIf="showAddForm">
+      <form [formGroup]="addForm" (ngSubmit)="addNewItem()" class="gi-add-form">
+        <div class="form-header">
+          <h4>➕ Add New Field</h4>
+        </div>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="add-name">Field Name *</label>
+            <input
+              id="add-name"
+              type="text"
+              formControlName="name"
+              class="form-input"
+              placeholder="e.g., Temperature, pH, Humidity"
+              [class.invalid]="addForm.get('name')?.touched && addForm.get('name')?.invalid"
+            />
+            <span class="error-text" *ngIf="addForm.get('name')?.touched && addForm.get('name')?.hasError('required')">
+              Field name is required
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="add-value">Field Value *</label>
+            <input
+              id="add-value"
+              type="text"
+              formControlName="value"
+              class="form-input"
+              placeholder="e.g., 25°C, 7.4, 65%"
+              [class.invalid]="addForm.get('value')?.touched && addForm.get('value')?.invalid"
+            />
+            <span class="error-text" *ngIf="addForm.get('value')?.touched && addForm.get('value')?.hasError('required')">
+              Field value is required
+            </span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" (click)="toggleAddForm()">
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            class="btn-save" 
+            [disabled]="saving || addForm.invalid">
+            <span *ngIf="!saving">💾 Add Field</span>
+            <span *ngIf="saving" class="spinner-inline"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- ITEMS LIST -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="gi-items-list" *ngIf="generalInfoList.length > 0">
+      <div class="list-header">
+        <h4>📄 Information Fields ({{ generalInfoList.length }})</h4>
+      </div>
+
+      <div class="gi-table">
+        <div class="gi-table-header">
+          <div class="gi-col gi-col-name">Field Name</div>
+          <div class="gi-col gi-col-value">Value</div>
+          <div class="gi-col gi-col-actions">Actions</div>
+        </div>
+
+        <div class="gi-table-body">
+          <div class="gi-row" *ngFor="let item of generalInfoList; let i = index">
+            
+            <!-- ──── VIEW MODE ──── -->
+            <ng-container *ngIf="!isEditing(item)">
+              <div class="gi-col gi-col-name">
+                <div class="field-name-display">
+                  <span class="field-icon">📌</span>
+                  <span class="field-text">{{ item.name }}</span>
+                </div>
+              </div>
+              <div class="gi-col gi-col-value">
+                <div class="field-value-display">{{ item.value }}</div>
+              </div>
+              <div class="gi-col gi-col-actions">
+                <button 
+                  class="btn-icon btn-edit" 
+                  (click)="enableEdit(item)"
+                  title="Edit">
+                  ✏️
+                </button>
+                <button 
+                  class="btn-icon btn-delete" 
+                  (click)="deleteItem(item)"
+                  [disabled]="saving"
+                  title="Delete">
+                  🗑️
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- ──── EDIT MODE ──── -->
+            <ng-container *ngIf="isEditing(item) && getEditForm(item) as form">
+              <div class="gi-col gi-col-name" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="name"
+                  class="form-input-inline"
+                  placeholder="Field name"
+                  [class.invalid]="form.get('name')?.touched && form.get('name')?.invalid"
+                />
+              </div>
+              <div class="gi-col gi-col-value" [formGroup]="form">
+                <input
+                  type="text"
+                  formControlName="value"
+                  class="form-input-inline"
+                  placeholder="Field value"
+                  [class.invalid]="form.get('value')?.touched && form.get('value')?.invalid"
+                />
+              </div>
+              <div class="gi-col gi-col-actions">
+                <button 
+                  class="btn-icon btn-save-inline" 
+                  (click)="saveEdit(item)"
+                  [disabled]="saving"
+                  title="Save">
+                  ✅
+                </button>
+                <button 
+                  class="btn-icon btn-cancel-inline" 
+                  (click)="cancelEdit(item)"
+                  title="Cancel">
+                  ✕
+                </button>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <!-- EMPTY STATE -->
+    <!-- ──────────────────────────────────────────────────────────────────── -->
+    <div class="gi-empty" *ngIf="generalInfoList.length === 0 && !showAddForm">
+      <div class="empty-icon">📭</div>
+      <h4>No Information Fields</h4>
+      <p>Click "Add New Field" to create the first entry</p>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <!-- FOOTER -->
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+  <div class="gi-footer">
+    <button class="btn-close-footer" (click)="close()">
+      Close
+    </button>
+  </div>
+
+</div>

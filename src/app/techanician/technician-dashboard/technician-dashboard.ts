@@ -260,7 +260,6 @@ export class TechnicianDashboard implements OnInit {
 
  confirmForwardToQualityCheck() {
   if (!this.selectedSample) return;
-
   this.technicianService
     .forwardToQualityCheck(this.selectedSample.reportNumber)
     .subscribe({

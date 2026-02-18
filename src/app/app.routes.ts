@@ -15,37 +15,45 @@ import { TechnicianLogin } from './components/technician-login/technician-login'
 import { TechnicianDashboard } from './techanician/technician-dashboard/technician-dashboard';
 import { TechnicianSampleResult } from './techanician/technician-sample-result/technician-sample-result';
 import { TechanicianGeneralInfo } from './techanician/techanician-general-info/techanician-general-info';
+import { QualityLogin } from './components/quality-login/quality-login';
+import { QualityDashboard } from './quality/quality-dashboard/quality-dashboard';
+import { QualityGeneralInfo } from './quality/quality-general-info/quality-general-info';
+import { QualitySampleResult } from './quality/quality-sample-result/quality-sample-result';
 
 export const routes: Routes = [
- { path: 'home', component: HomePage },
-  {path: '', redirectTo: 'home', pathMatch: 'full' },
-  {path: 'sample/login', component: SampleLogin },
-  {path: 'sample/dashboard', component: SampleDashboard },
-  {path: 'samples/register', component: SampleRegistration},
-  {path: 'samples/edit/:id',  component: SampleEdit},
-  {path: 'sample/general-information/:reportNumber',component: GeneralInformation},
-  {path: 'samples/all', component: AllSamples},
-  {path: 'analyst/login', component: AnalystLogin},
-   { path: 'analyst/login', component: AnalystLogin },
-  { 
-    path: 'analyst/dashboard', 
+  { path: 'home', component: HomePage },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: 'sample/login', component: SampleLogin },
+  { path: 'sample/dashboard', component: SampleDashboard },
+  { path: 'samples/register', component: SampleRegistration },
+  { path: 'samples/edit/:id', component: SampleEdit },
+  { path: 'sample/general-information/:reportNumber', component: GeneralInformation },
+  { path: 'samples/all', component: AllSamples },
+  { path: 'analyst/login', component: AnalystLogin },
+  // { path: 'analyst/login', component: AnalystLogin },
+  {
+    path: 'analyst/dashboard',
     component: AnalystDashboard
 
   },
 
-   { 
-    path: 'edit-general-info', 
+  {
+    path: 'edit-general-info',
     component: AnalystGeneralInfoComponent
   },
 
-   { 
-    path: 'edit-sample-result', 
+  {
+    path: 'edit-sample-result',
     component: AnalystSampleResultComponent
-
   },
-   { path: 'techanician/login', component: TechnicianLogin },
-   { path: 'techanician/dashboard', component: TechnicianDashboard },
-   { path: 'techanician/general-info', component:TechanicianGeneralInfo },
-   { path: 'techanician/sample-result', component: TechnicianSampleResult},
+  { path: 'techanician/login', component: TechnicianLogin },
+  { path: 'techanician/dashboard', component: TechnicianDashboard },
+  { path: 'techanician/general-info', component: TechanicianGeneralInfo },
+  { path: 'techanician/sample-result', component: TechnicianSampleResult },
+
+  { path: 'quality/login', component: QualityLogin },
+  { path: 'quality/dashboard', component: QualityDashboard },
+  { path: 'quality/general-info', component: QualityGeneralInfo },
+  { path: 'quality/sample-result', component: QualitySampleResult },
 ];
 

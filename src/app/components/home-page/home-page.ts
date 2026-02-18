@@ -27,4 +27,9 @@ goToTechanicianLogin(){
 
   this.router.navigate(['/techanician/login']);
 }
+
+goToQualityLogin(){
+
+  this.router.navigate(['/quality/login']);
+}
 }

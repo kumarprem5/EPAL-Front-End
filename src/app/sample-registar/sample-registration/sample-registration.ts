@@ -1,12 +1,78 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
-import { SampleService, TestParameter } from '../../services/sample-service';
+import { forkJoin, Observable, Subject, takeUntil } from 'rxjs';
+import { SampleResult, SampleService, TestParameter } from '../../services/sample-service';
 import { Router } from '@angular/router';
 import { SampleRequest } from '../../interfaces/sample-request';
 import { CommonModule } from '@angular/common';
 import { SampleHeader } from "../sample-header/sample-header";
 import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
+import { GeneralInformationModel, GeneralInformationService } from '../../services/general-information-service';
+import { GeneralInformationservice } from '../../services/general-information';
+
+// ── Interfaces ─────────────────────────────────────────────────────────────
+
+/**
+ * Full sample description object returned from the API.
+ * Keeping the full object (instead of just the string) allows
+ * auto-filling analysisProtocol and formatNumber on selection.
+ */
+interface SampleDescriptionItem {
+  sampleDescription: string;
+  analysisProtocol?:  string;
+  formatNumber?:      string;
+  [key: string]:      any;          // allow extra fields from backend
+}
+
+interface GeneralInfoDropDown {
+  id?:               number;
+  parameterName:     string;
+  sampleDescription?: string;
+  defaultValues?:    string;
+  values?:           string;
+  choiceList?:       string[];
+}
+
+interface ResultDropDown {
+  id?:               number;
+  name:              string;
+  unit:              string;
+  result:            string;
+  sampleDescription: string;
+  protocal:          string;
+  standarded:        string;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function parseChoices(raw: string | undefined | null): string[] {
+  if (!raw?.trim()) return [];
+  return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function pickDefaultValue(param: GeneralInfoDropDown): string {
+  if (param.defaultValues && !param.defaultValues.includes(',')) return param.defaultValues.trim();
+  const choices = parseChoices(param.values ?? param.defaultValues);
+  return choices.length > 0 ? choices[0] : '';
+}
+
+function toInfoModel(raw: any, fallbackDesc = ''): GeneralInformationModel | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const name = (raw.name ?? raw.parameterName ?? '').toString().trim();
+  if (!name) return null;
+  return {
+    id:                raw.id != null ? Number(raw.id) : undefined,
+    name,
+    value:             raw.value != null ? raw.value.toString() : '',
+    reportNumber:      (raw.reportNumber ?? '').toString(),
+    sampleDescription: (raw.sampleDescription ?? fallbackDesc).toString(),
+  };
+}
+
+
+// ── Component ──────────────────────────────────────────────────────────────
+
+
 
 @Component({
   selector: 'app-sample-registration',
@@ -14,273 +80,573 @@ import { ColdObservable } from 'rxjs/internal/testing/ColdObservable';
   templateUrl: './sample-registration.html',
   styleUrl: './sample-registration.css',
 })
-export class SampleRegistration {
- sampleForm!: FormGroup;
-  isSubmitting = false;
-  submitSuccess = false;
-  submitError = false;
-  errorMessage = '';
-  successMessage = '';
+export class SampleRegistration   implements OnInit, OnDestroy {
 
-  // Dropdown and test parameters
-  sampleDescriptions: string[] = [];
-  loadingDescriptions = false;
-  testParameters: TestParameter[] = [];
-  loadingParameters = false;
+// ── Form ──────────────────────────────────────────────────────────────────
+  sampleForm!:   FormGroup;
+  submitSuccess  = false;
+  submitError    = false;
+  errorMessage   = '';
+
+  // ── Toast ─────────────────────────────────────────────────────────────────
+  uiMessage      = '';
+  uiMessageType: 'success' | 'error' | '' = '';
+
+  // ── Step 1 ────────────────────────────────────────────────────────────────
+  sampleDescriptions:     SampleDescriptionItem[] = [];
+  loadingDescriptions     = false;
+  registeredSampleNumber  = '';
+  registeredReportNumber  = '';
+  activeSampleDescription = '';
+
+  // ── Step 2 — General Information ──────────────────────────────────────────
+  informations:         GeneralInformationModel[] = [];
+  generalInfoDropDowns: GeneralInfoDropDown[]     = [];
+  selectedInfoParam:    GeneralInfoDropDown | null = null;
+  newInfo:              GeneralInformationModel   = { name: '', value: '', reportNumber: '' };
+  isLoadingInfo         = false;
+  isLoadingDropDowns    = false;
+  generalInfoSaved      = false;
+
+  // ── Step 3 — Result Parameters ────────────────────────────────────────────
+  resultDropDowns:         ResultDropDown[]      = [];
+  selectedResultDropDown:  ResultDropDown | null = null;
+  selectedSampleResults:   SampleResult[]        = [];
+  isLoadingResults         = false;
+  isLoadingResultDropDowns = false;
+
+  // ── Global Save All ───────────────────────────────────────────────────────
+  isSavingAll = false;
 
   private destroy$ = new Subject<void>();
 
   constructor(
-    private fb: FormBuilder,
+    private fb:            FormBuilder,
     private sampleService: SampleService,
-    private router: Router
+    private infoService:   GeneralInformationService,
   ) {
     this.initializeForm();
   }
 
-  ngOnInit(): void {
-    this.loadSampleDescriptions();
-  }
+  ngOnInit():    void { this.loadSampleDescriptions(); }
+  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
 
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  // ── Form Init ──────────────────────────────────────────────────────────────
 
-  /**
-   * Initialize the form with validators
-   */
   private initializeForm(): void {
     this.sampleForm = this.fb.group({
-      projectName: ['', [Validators.required, Validators.minLength(3)]],
-      address: ['', [Validators.required, Validators.minLength(5)]],
-      sampleDescription: ['', Validators.required],
+      projectName:                 ['', [Validators.required, Validators.minLength(3)]],
+      address:                     ['', [Validators.required, Validators.minLength(5)]],
+      sampleDescription:           ['', Validators.required],
       samplingAndAnalysisProtocol: [''],
-      formatNumber: [''],
-      partyReferenceNumber: [''],
-      reportingDate: ['', Validators.required],
-      periodOfAnalysis: [''],
-      dateOfReceiving: ['', Validators.required]
+      formatNumber:                [''],
+      partyReferenceNumber:        [''],
+      reportingDate:               ['', Validators.required],
+      periodOfAnalysis:            [''],
+      dateOfReceiving:             ['', Validators.required],
     });
   }
 
-  /**
-   * Load sample descriptions from backend
-   * FIXED: Properly handles response format [{sampleDescription: "value"}]
-   */
+  // ── Step 1: Load Sample Descriptions ──────────────────────────────────────
+
   loadSampleDescriptions(): void {
     this.loadingDescriptions = true;
-    
-    // Disable the dropdown while loading
     this.sampleForm.get('sampleDescription')?.disable();
-    
+
     this.sampleService.getAllSampleDescriptions()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: (res) => {
           this.loadingDescriptions = false;
-          
-          if (response.status === 'SUCCESS' && response.data) {
-            // ✅ FIXED: Map the array of objects to array of strings
-            // Backend returns: [{sampleDescription: "Ambient Noise"}, ...]
-            // We need: ["Ambient Noise", ...]
-            this.sampleDescriptions = response.data.map(
-              (item: any) => item.sampleDescription
-            );
-            
-            console.log("Sample Descriptions (mapped):", this.sampleDescriptions);
+          if (res.status === 'SUCCESS' && Array.isArray(res.data)) {
+            // ✅ Store full objects for auto-fill of analysisProtocol & formatNumber
+            this.sampleDescriptions = res.data as SampleDescriptionItem[];
           }
-          
-          // Enable the dropdown after loading
           this.sampleForm.get('sampleDescription')?.enable();
         },
-        error: (error) => {
+        error: () => {
           this.loadingDescriptions = false;
-          console.error('Error loading sample descriptions:', error);
-          this.errorMessage = 'Failed to load sample descriptions';
-          this.submitError = true;
-          
-          // Enable the dropdown even on error
           this.sampleForm.get('sampleDescription')?.enable();
-          
-          setTimeout(() => {
-            this.submitError = false;
-          }, 3000);
-        }
+          this.setError('Failed to load sample descriptions');
+        },
       });
   }
 
   /**
-   * Handle sample description change
+   * Fires when the user picks a sample description.
+   * ✅ AUTO-FILLS: samplingAndAnalysisProtocol, formatNumber
+   * ✅ LOADS: general info by sample description + result dropdown templates
    */
   onSampleDescriptionChange(event: Event): void {
-    const selectElement = event.target as HTMLSelectElement;
-    const selectedDescription = selectElement.value;
-    
-    if (selectedDescription) {
-      this.loadTestParameters(selectedDescription);
-    } else {
-      this.testParameters = [];
+    const selected = (event.target as HTMLSelectElement).value;
+
+    const selectedItem = this.sampleDescriptions.find(
+      item => item.sampleDescription === selected
+    );
+
+    if (!selectedItem) return;
+
+    this.activeSampleDescription = selectedItem.sampleDescription;
+
+    // ✅ Auto-fill protocol and format number
+    this.sampleForm.patchValue({
+      samplingAndAnalysisProtocol: selectedItem.analysisProtocol ?? '',
+      formatNumber:                selectedItem.formatNumber      ?? '',
+    });
+
+    // Reset tables
+    this.informations          = [];
+    this.selectedSampleResults = [];
+    this.generalInfoSaved      = false;
+    this.generalInfoDropDowns  = [];
+    this.resultDropDowns       = [];
+    this.selectedInfoParam     = null;
+    this.newInfo = { name: '', value: '', reportNumber: this.registeredReportNumber };
+
+    // ✅ Load saved general info by sample description
+    this.loadGeneralInfoBySampleDescription(this.activeSampleDescription);
+
+    // Load dropdown templates for both sections
+    this.loadGeneralInfoDropDowns(this.activeSampleDescription);
+    this.loadResultDropDowns(this.activeSampleDescription);
+
+    // If already registered, also load by report number
+    if (this.registeredReportNumber) {
+      this.loadSavedGeneralInfo(this.registeredReportNumber);
     }
   }
 
-  /**
-   * Load test parameters based on selected description
-   */
-  loadTestParameters(sampleDescription: string): void {
-    this.loadingParameters = true;
-    this.testParameters = [];
-    
-    this.sampleService.getTestParametersBySampleDescription(sampleDescription)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.loadingParameters = false;
-          if (response.status === 'SUCCESS' && response.data) {
-            this.testParameters = response.data;
-            console.log('Loaded test parameters:', this.testParameters);
-          }
-        },
-        error: (error) => {
-          this.loadingParameters = false;
-          console.error('Error loading test parameters:', error);
-        }
-      });
-  }
+  // ── ✅ MASTER SAVE ALL — Sample + General Info + Results ───────────────────
 
   /**
-   * Submit the form
+   * Single "Save All" button at the bottom saves everything:
+   *   1. Registers sample (if not yet done)
+   *   2. Saves / updates all General Info rows
+   *   3. Saves / updates all Result Parameter rows
    */
-  onSubmit(): void {
+  saveAll(): void {
     if (this.sampleForm.invalid) {
       this.markFormGroupTouched(this.sampleForm);
+      this.showMessage('Please fill all required fields in Sample Details', 'error');
       return;
     }
 
-    this.isSubmitting = true;
-    this.submitSuccess = false;
-    this.submitError = false;
-    this.errorMessage = '';
+    this.isSavingAll = true;
 
-    const sampleRequest: SampleRequest = this.sampleForm.value;
+    if (!this.submitSuccess) {
+      // Register sample first, then save info + results
+      this.sampleService.addSample(this.sampleForm.value)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (res) => {
+            this.submitSuccess          = true;
+            this.registeredSampleNumber = res.data?.sampleNumber ?? '';
+            this.registeredReportNumber = res.data?.reportNumber  ?? '';
+            this.newInfo.reportNumber   = this.registeredReportNumber;
 
-    this.sampleService.addSample(sampleRequest)
+            // ✅ Stamp every info row with the newly assigned reportNumber BEFORE saving
+            this.informations = this.informations.map(info => ({
+              ...info,
+              reportNumber:      this.registeredReportNumber,
+              sampleDescription: this.activeSampleDescription,
+            }));
+
+            this.persistInfoAndResults(() => {
+              this.isSavingAll = false;
+              this.showMessage('Sample, General Info & Results saved successfully! ✓', 'success');
+            });
+          },
+          error: (err) => {
+            this.isSavingAll = false;
+            this.setError(err?.error?.message ?? 'Failed to register sample.');
+          },
+        });
+    } else {
+      // Sample already registered — save info + results only
+      this.persistInfoAndResults(() => {
+        this.isSavingAll = false;
+        this.showMessage('General Info & Results saved successfully! ✓', 'success');
+      });
+    }
+  }
+
+  /**
+   * Persists all General Info and Result rows using forkJoin.
+   * Calls onDone() once all requests complete.
+   */
+  private persistInfoAndResults(onDone: () => void): void {
+    const requests$: Observable<any>[] = [];
+
+    // ── General Info rows ────────────────────────────────────────────────────
+    this.informations.forEach((info, idx) => {
+      info.reportNumber      = this.registeredReportNumber;
+      info.sampleDescription = this.activeSampleDescription;
+
+      const req$ = typeof info.id !== 'number'
+        ? this.infoService.addInformation(info)
+        : this.infoService.updateInformation(info);
+
+      // Side-effect: update local row with returned id
+      const tracked$ = new Observable(observer => {
+        req$.pipe(takeUntil(this.destroy$)).subscribe({
+          next: (res) => {
+            if (res?.status === 'SUCCESS' && res.data) {
+              const saved = toInfoModel(res.data, this.activeSampleDescription);
+              if (saved) {
+                if (!saved.value) saved.value = info.value;
+                this.informations[idx] = saved;
+                this.informations      = [...this.informations];
+              }
+              this.generalInfoSaved = true;
+            }
+            observer.next(res);
+            observer.complete();
+          },
+          error: (e) => observer.error(e),
+        });
+      });
+
+      requests$.push(tracked$);
+    });
+
+    // ── Result rows ───────────────────────────────────────────────────────────
+    this.selectedSampleResults.forEach((result, idx) => {
+      result.sampleDescription = this.activeSampleDescription;
+
+      const req$ = typeof result.id !== 'number'
+        ? this.sampleService.createSampleResult(result)
+        : this.sampleService.updateSampleResult(result);
+
+      const tracked$ = new Observable(observer => {
+        req$.pipe(takeUntil(this.destroy$)).subscribe({
+          next: (res) => {
+            const saved = (res as any)?.data ?? res;
+            if (saved?.id != null) {
+              result.id = saved.id;
+              this.selectedSampleResults[idx] = { ...result };
+              this.selectedSampleResults      = [...this.selectedSampleResults];
+            }
+            observer.next(res);
+            observer.complete();
+          },
+          error: (e) => observer.error(e),
+        });
+      });
+
+      requests$.push(tracked$);
+    });
+
+    if (requests$.length === 0) {
+      onDone();
+      return;
+    }
+
+    forkJoin(requests$)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.isSubmitting = false;
-          this.submitSuccess = true;
-          this.successMessage = response.message || 'Sample registered successfully!';
-          
-          if (response.data) {
-            console.log('Generated Sample Number:', response.data.sampleNumber);
-            console.log('Generated Report Number:', response.data.reportNumber);
-          }
-          
-          this.sampleForm.reset();
-          this.testParameters = [];
-          
-          setTimeout(() => {
-            this.submitSuccess = false;
-          }, 5000);
+        next:  () => onDone(),
+        error: (err) => {
+          this.isSavingAll = false;
+          this.showMessage(err?.error?.message ?? 'Some rows failed to save. Please try again.', 'error');
         },
-        error: (error) => {
-          this.isSubmitting = false;
-          this.submitError = true;
-          this.errorMessage = error.message || 'Failed to register sample. Please try again.';
-          console.error('Error creating sample:', error);
-        }
       });
   }
 
-  /**
-   * Reset the form
-   */
   onReset(): void {
     this.sampleForm.reset();
-    this.submitSuccess = false;
-    this.submitError = false;
-    this.errorMessage = '';
-    this.successMessage = '';
-    this.testParameters = [];
+    this.submitSuccess           = false;
+    this.submitError             = false;
+    this.errorMessage            = '';
+    this.informations            = [];
+    this.selectedSampleResults   = [];
+    this.generalInfoSaved        = false;
+    this.activeSampleDescription = '';
+    this.registeredSampleNumber  = '';
+    this.registeredReportNumber  = '';
+    this.generalInfoDropDowns    = [];
+    this.resultDropDowns         = [];
+    this.selectedInfoParam       = null;
+    this.newInfo                 = { name: '', value: '', reportNumber: '' };
+    this.uiMessage               = '';
+    this.isSavingAll             = false;
   }
 
+  // ── Step 2: General Information ────────────────────────────────────────────
+
   /**
-   * Cancel and navigate back
+   * ✅ NEW: Load saved General Info rows by sample description.
+   * Fires immediately when user selects a sample description.
    */
-  onCancel(): void {
-    if (this.sampleForm.dirty) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
-        this.router.navigate(['/samples/list']);
-      }
-    } else {
-      this.router.navigate(['/samples/list']);
+  loadGeneralInfoBySampleDescription(sampleDescription: string): void {
+    if (!sampleDescription) return;
+    this.isLoadingInfo = true;
+
+    this.infoService.getBySampleDescription(sampleDescription)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingInfo = false;
+          if (res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
+            this.informations = res.data
+              .map((raw: any) => toInfoModel(raw, sampleDescription))
+              .filter((m): m is GeneralInformationModel => m !== null);
+            this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
+          }
+        },
+        error: (err) => {
+          this.isLoadingInfo = false;
+          console.error('[loadGeneralInfoBySampleDescription]', err);
+        },
+      });
+  }
+
+  /** Loads TestParameter dropdown templates for the selected sample description. */
+  loadGeneralInfoDropDowns(sampleDescription: string): void {
+    if (!sampleDescription) return;
+    this.isLoadingDropDowns = true;
+
+    this.sampleService.getGeneralInfoDropDownsBySampleDescription(sampleDescription)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingDropDowns = false;
+          if (res.status === 'SUCCESS' && Array.isArray(res.data)) {
+            this.generalInfoDropDowns = res.data.map((item: any) => ({
+              ...item,
+              choiceList: parseChoices(item.values ?? item.defaultValues),
+            }));
+
+            // Pre-populate only if table is empty
+            if (this.informations.length === 0) {
+              this.informations = this.generalInfoDropDowns.map(param => ({
+                name:              param.parameterName,
+                value:             pickDefaultValue(param),
+                reportNumber:      this.registeredReportNumber,
+                sampleDescription: this.activeSampleDescription,
+              }));
+            }
+          }
+        },
+        error: (err) => {
+          this.isLoadingDropDowns = false;
+          console.error('[loadGeneralInfoDropDowns]', err);
+        },
+      });
+  }
+
+  /** Load previously saved general info by report number (existing reports). */
+  loadSavedGeneralInfo(reportNumber: string): void {
+    if (!reportNumber) return;
+    this.isLoadingInfo = true;
+
+    this.infoService.getByReportNumber(reportNumber)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingInfo = false;
+          if (res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
+            this.informations = res.data
+              .map((raw: any) => toInfoModel(raw, this.activeSampleDescription))
+              .filter((m): m is GeneralInformationModel => m !== null && typeof m.id === 'number');
+            this.generalInfoSaved = this.informations.length > 0;
+          }
+        },
+        error: (err) => {
+          this.isLoadingInfo = false;
+          console.error('[loadSavedGeneralInfo]', err);
+        },
+      });
+  }
+
+
+  onInfoParamSelect(param: GeneralInfoDropDown | null): void {
+    this.selectedInfoParam = param;
+    if (param) {
+      this.newInfo.name  = param.parameterName;
+      this.newInfo.value = pickDefaultValue(param);
     }
   }
 
-  /**
-   * Check if a field is invalid and touched
-   */
+  addInformationRow(): void {
+    if (!this.newInfo.name?.trim()) { this.showMessage('Please select a parameter', 'error'); return; }
+
+    if (this.informations.some(i => i.name === this.newInfo.name)) {
+      this.showMessage('This parameter is already in the list', 'error'); return;
+    }
+
+    this.informations = [...this.informations, {
+      name:              this.newInfo.name,
+      value:             this.newInfo.value,
+      reportNumber:      this.registeredReportNumber,
+      sampleDescription: this.activeSampleDescription,
+    }];
+
+    this.selectedInfoParam = null;
+    this.newInfo = { name: '', value: '', reportNumber: this.registeredReportNumber };
+  }
+
+  removeInformation(info: GeneralInformationModel, index: number): void {
+    if (typeof info.id !== 'number') {
+      this.informations.splice(index, 1);
+      this.informations     = [...this.informations];
+      this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
+      return;
+    }
+
+    if (!confirm(`Remove "${info.name}"?`)) return;
+
+    this.infoService.deleteInformation(info.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const ok = res == null
+            || (res as any)?.status === 'SUCCESS'
+            || (typeof res === 'object' && (res as any)?.status !== 'ERROR');
+          if (ok) {
+            this.informations.splice(index, 1);
+            this.informations     = [...this.informations];
+            this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
+            this.showMessage('Removed ✓', 'success');
+          } else {
+            this.showMessage((res as any)?.message ?? 'Delete failed', 'error');
+          }
+        },
+        error: () => this.showMessage('Delete failed', 'error'),
+      });
+  }
+
+  // ── Step 3: Result Parameters ──────────────────────────────────────────────
+
+  loadResultDropDowns(sampleDescription: string): void {
+    if (!sampleDescription) return;
+    this.isLoadingResultDropDowns = true;
+
+    this.sampleService.getResultDropDownsBySampleDescription(sampleDescription)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingResultDropDowns = false;
+          if (res.status === 'SUCCESS' && Array.isArray(res.data)) {
+            this.resultDropDowns = res.data;
+
+            if (this.selectedSampleResults.length === 0) {
+              this.selectedSampleResults = res.data.map((t: ResultDropDown) => ({
+                name:              t.name,
+                unit:              t.unit       ?? '',
+                result:            t.result     ?? '',
+                protocal:          t.protocal   ?? '',
+                standarded:        t.standarded ?? '',
+                sampleDescription: this.activeSampleDescription,
+                isNABL:            false,
+              }));
+            }
+          }
+        },
+        error: (err) => {
+          this.isLoadingResultDropDowns = false;
+          console.error('[loadResultDropDowns]', err);
+        },
+      });
+  }
+
+  loadSavedResults(sampleDescription: string): void {
+    if (!sampleDescription) return;
+    this.isLoadingResults = true;
+
+    this.sampleService.findSampleResultsByDescription(sampleDescription)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.isLoadingResults = false;
+          if (res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
+            this.selectedSampleResults = res.data;
+          }
+        },
+        error: (err) => {
+          this.isLoadingResults = false;
+          console.error('[loadSavedResults]', err);
+        },
+      });
+  }
+
+  onResultDropDownSelect(selected: ResultDropDown | null): void {
+    this.selectedResultDropDown = selected;
+  }
+
+  addResultFromDropDown(): void {
+    if (!this.selectedResultDropDown) return;
+    const d = this.selectedResultDropDown;
+    this.selectedSampleResults = [...this.selectedSampleResults, {
+      name: d.name, unit: d.unit ?? '', result: d.result ?? '',
+      protocal: d.protocal ?? '', standarded: d.standarded ?? '',
+      sampleDescription: this.activeSampleDescription, isNABL: false,
+    }];
+    this.selectedResultDropDown = null;
+  }
+
+  addBlankResult(): void {
+    this.selectedSampleResults = [...this.selectedSampleResults, {
+      name: '', unit: '', result: '', protocal: '', standarded: '',
+      sampleDescription: this.activeSampleDescription, isNABL: false,
+    }];
+  }
+
+  deleteSampleResult(result: SampleResult, index: number): void {
+    if (typeof result.id !== 'number') {
+      this.selectedSampleResults.splice(index, 1);
+      this.selectedSampleResults = [...this.selectedSampleResults];
+      return;
+    }
+
+    if (!confirm(`Remove "${result.name}"?`)) return;
+
+    this.sampleService.deleteSampleResult(result.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const ok = res == null
+            || (res as any)?.status === 'SUCCESS'
+            || (typeof res === 'object' && (res as any)?.status !== 'ERROR');
+          if (ok) {
+            this.selectedSampleResults.splice(index, 1);
+            this.selectedSampleResults = [...this.selectedSampleResults];
+            this.showMessage('Removed ✓', 'success');
+          } else {
+            this.showMessage((res as any)?.message ?? 'Delete failed', 'error');
+          }
+        },
+        error: () => this.showMessage('Delete failed', 'error'),
+      });
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+
   isFieldInvalid(fieldName: string): boolean {
-    const field = this.sampleForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
+    const f = this.sampleForm.get(fieldName);
+    return !!(f?.invalid && (f.dirty || f.touched));
   }
 
-  /**
-   * Get error message for a field
-   */
-  getFieldError(fieldName: string): string {
-    const field = this.sampleForm.get(fieldName);
-    
-    if (field?.hasError('required')) {
-      return `${this.getFieldLabel(fieldName)} is required`;
-    }
-    
-    if (field?.hasError('minlength')) {
-      const minLength = field.errors?.['minlength'].requiredLength;
-      return `${this.getFieldLabel(fieldName)} must be at least ${minLength} characters`;
-    }
-    
-    return '';
+  isInfoRowUnsaved(info: GeneralInformationModel):  boolean { return typeof info.id   !== 'number'; }
+  isResultRowUnsaved(result: SampleResult):          boolean { return typeof result.id !== 'number'; }
+
+  private setError(msg: string): void {
+    this.submitError  = true;
+    this.errorMessage = msg;
+    this.showMessage(msg, 'error');
+    setTimeout(() => { this.submitError = false; this.errorMessage = ''; }, 5000);
   }
 
-  /**
-   * Get user-friendly label for field
-   */
-  private getFieldLabel(fieldName: string): string {
-    const labels: { [key: string]: string } = {
-      projectName: 'Project Name',
-      address: 'Address',
-      sampleDescription: 'Sample Description',
-      samplingAndAnalysisProtocol: 'Sampling & Analysis Protocol',
-      formatNumber: 'Format Number',
-      partyReferenceNumber: 'Party Reference Number',
-      reportingDate: 'Reporting Date',
-      periodOfAnalysis: 'Period of Analysis',
-      dateOfReceiving: 'Date of Receiving'
-    };
-    
-    return labels[fieldName] || fieldName;
+  showMessage(message: string, type: 'success' | 'error' = 'success'): void {
+    this.uiMessage     = message;
+    this.uiMessageType = type;
+    setTimeout(() => { this.uiMessage = ''; this.uiMessageType = ''; }, 4000);
   }
 
-  /**
-   * Mark all fields in form group as touched
-   */
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.keys(formGroup.controls).forEach(key => {
-      const control = formGroup.get(key);
-      control?.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+  private markFormGroupTouched(fg: FormGroup): void {
+    Object.keys(fg.controls).forEach(k => {
+      const c = fg.get(k);
+      c?.markAsTouched();
+      if (c instanceof FormGroup) this.markFormGroupTouched(c);
     });
-  }
-
-  /**
-   * Get today's date in YYYY-MM-DD format for max date validation
-   */
-  getTodayDate(): string {
-    return new Date().toISOString().split('T')[0];
   }
 }

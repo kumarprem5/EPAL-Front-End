@@ -17,21 +17,21 @@ export interface ApiResponse<T> {
 })
 export class GeneralInformationservice{
 
- private baseUrl = 'http://localhost:8080/api/collector/samples'
-  constructor(private http: HttpClient) {}  
+ // ✅ FIXED: correct base URL (matches sample-service.ts)
+  private baseUrl = 'http://localhost:8080/api/collector/samples';
+
+  constructor(private http: HttpClient) {}
 
   private getHeaders() {
     return {
       headers: new HttpHeaders({
         token: localStorage.getItem('token') || '',
-        'Content-Type': 'application/json'
-      })
+        'Content-Type': 'application/json',
+      }),
     };
   }
 
-  addInformation(
-    data: GeneralInformationModel
-  ): Observable<ApiResponse<GeneralInformationModel>> {
+  addInformation(data: GeneralInformationModel): Observable<ApiResponse<GeneralInformationModel>> {
     return this.http.post<ApiResponse<GeneralInformationModel>>(
       `${this.baseUrl}/general-information/add`,
       data,
@@ -39,9 +39,7 @@ export class GeneralInformationservice{
     );
   }
 
-  updateInformation(
-    data: GeneralInformationModel
-  ): Observable<ApiResponse<GeneralInformationModel>> {
+  updateInformation(data: GeneralInformationModel): Observable<ApiResponse<GeneralInformationModel>> {
     return this.http.put<ApiResponse<GeneralInformationModel>>(
       `${this.baseUrl}/general-information/update`,
       data,
@@ -49,9 +47,7 @@ export class GeneralInformationservice{
     );
   }
 
-  getByReportNumber(
-    reportNumber: string
-  ): Observable<ApiResponse<GeneralInformationModel[]>> {
+  getByReportNumber(reportNumber: string): Observable<ApiResponse<GeneralInformationModel[]>> {
     return this.http.post<ApiResponse<GeneralInformationModel[]>>(
       `${this.baseUrl}/general-information/by-report`,
       { reportNumber },
@@ -64,7 +60,7 @@ export class GeneralInformationservice{
       `${this.baseUrl}/general-information/delete`,
       {
         headers: this.getHeaders().headers,
-        params: { id: id.toString() }
+        params: { id: id.toString() },
       }
     );
   }

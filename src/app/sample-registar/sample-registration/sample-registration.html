@@ -1,160 +1,392 @@
+<!-- components/sample-registration/sample-registration.html -->
+
 <app-sample-header></app-sample-header>
 
-<div class="dashboard">
-  
-  <div class="sample-registration-container">
-    <div class="form-card">
-      <h2 class="form-title">Register New Sample</h2>
-      
-      <div *ngIf="submitSuccess" class="alert alert-success">
-        Sample registered successfully!
+<div class="page-wrapper">
+  <div class="page-content">
+
+    <!-- ══════════════════════════════════════════════════════
+         STEP INDICATOR
+    ══════════════════════════════════════════════════════ -->
+    <div class="step-trail">
+      <div class="step-node" [class.active]="true" [class.done]="submitSuccess">
+        <div class="node-circle">
+          <span *ngIf="!submitSuccess">01</span>
+          <span *ngIf="submitSuccess">✓</span>
+        </div>
+        <span class="node-label">Sample Details</span>
       </div>
-      
-      <div *ngIf="submitError" class="alert alert-error">
-        {{ errorMessage }}
+      <div class="step-line" [class.done]="submitSuccess"></div>
+      <div class="step-node" [class.active]="submitSuccess" [class.done]="submitSuccess && generalInfoSaved">
+        <div class="node-circle">
+          <span *ngIf="!(submitSuccess && generalInfoSaved)">02</span>
+          <span *ngIf="submitSuccess && generalInfoSaved">✓</span>
+        </div>
+        <span class="node-label">General Info</span>
+      </div>
+      <div class="step-line" [class.done]="submitSuccess && generalInfoSaved"></div>
+      <div class="step-node" [class.active]="submitSuccess && generalInfoSaved">
+        <div class="node-circle">03</div>
+        <span class="node-label">Result Parameters</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         GLOBAL ALERT
+    ══════════════════════════════════════════════════════ -->
+    <div *ngIf="uiMessage"
+         class="ui-alert"
+         [class.success]="uiMessageType === 'success'"
+         [class.error]="uiMessageType === 'error'">
+      <span class="alert-icon">{{ uiMessageType === 'success' ? '✓' : '✕' }}</span>
+      {{ uiMessage }}
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         SECTION 1 — SAMPLE REGISTRATION
+    ══════════════════════════════════════════════════════ -->
+    <div class="section-card" id="section-sample">
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-badge">01</span>
+          <div>
+            <h2 class="section-title">Register New Sample</h2>
+            <p class="section-sub">Fill in project and sample details</p>
+          </div>
+        </div>
+        <div class="registered-tag" *ngIf="submitSuccess">
+          <span class="dot"></span> Registered
+          <span class="tag-numbers">{{ registeredSampleNumber }} · {{ registeredReportNumber }}</span>
+        </div>
       </div>
 
-      <form [formGroup]="sampleForm" (ngSubmit)="onSubmit()">
+      <!-- ✅ Removed (ngSubmit) — form is now submitted via the bottom Save All button -->
+      <form [formGroup]="sampleForm">
+
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="projectName">Project Name <span class="required">*</span></label>
-            <input 
-              type="text" 
-              id="projectName" 
-              formControlName="projectName"
-              [class.invalid]="isFieldInvalid('projectName')"
-              placeholder="Enter project name">
-            <span class="error-message" *ngIf="isFieldInvalid('projectName')">
-              Project name is required
+            <label for="projectName">Project Name <span class="req">*</span></label>
+            <input type="text" id="projectName" formControlName="projectName"
+                   [class.invalid]="isFieldInvalid('projectName')"
+                   placeholder="Enter project name" />
+            <span class="err-msg" *ngIf="isFieldInvalid('projectName')">
+              Project name is required (min 3 chars)
             </span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="address">Address <span class="required">*</span></label>
-            <textarea 
-              id="address" 
-              formControlName="address"
-              [class.invalid]="isFieldInvalid('address')"
-              placeholder="Enter address"
-              rows="2"></textarea>
-            <span class="error-message" *ngIf="isFieldInvalid('address')">
-              Address is required
+            <label for="address">Address <span class="req">*</span></label>
+            <textarea id="address" formControlName="address" rows="2"
+                      [class.invalid]="isFieldInvalid('address')"
+                      placeholder="Enter full address"></textarea>
+            <span class="err-msg" *ngIf="isFieldInvalid('address')">
+              Address is required (min 5 chars)
             </span>
           </div>
         </div>
 
-        <!-- ERROR FIXED: Added missing opening < bracket -->
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="sampleDescription">Sample Description <span class="required">*</span></label>
-            <select 
-              id="sampleDescription" 
-              formControlName="sampleDescription"
-              [class.invalid]="isFieldInvalid('sampleDescription')"
-              (change)="onSampleDescriptionChange($event)"
-              >
-              <option value="">
-                {{ loadingDescriptions ? 'Loading descriptions...' : 'Select sample description' }}
-              </option>
-              <option *ngFor="let description of sampleDescriptions" [value]="description">
-                {{ description }}
-              </option>
-            </select>
-            <span class="error-message" *ngIf="isFieldInvalid('sampleDescription')">
+            <label for="sampleDescription">Sample Description <span class="req">*</span></label>
+            <div class="select-wrap">
+              <select id="sampleDescription"
+                      formControlName="sampleDescription"
+                      [class.invalid]="isFieldInvalid('sampleDescription')"
+                      (change)="onSampleDescriptionChange($event)">
+                <option value="">
+                  {{ loadingDescriptions ? 'Loading descriptions…' : 'Select sample description' }}
+                </option>
+                <!-- ✅ Bind to d.sampleDescription string — full object available via .find() -->
+                <option *ngFor="let d of sampleDescriptions" [value]="d.sampleDescription">
+                  {{ d.sampleDescription }}
+                </option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+            <span class="err-msg" *ngIf="isFieldInvalid('sampleDescription')">
               Sample description is required
             </span>
           </div>
         </div>
-        <!-- ERROR FIXED: Added missing closing </div> tag -->
 
-       
-
+        <!-- ✅ AUTO-FILLED from selectedItem.analysisProtocol -->
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="samplingAndAnalysisProtocol">Sampling & Analysis Protocol</label>
-            <input 
-              type="text" 
-              id="samplingAndAnalysisProtocol" 
-              formControlName="samplingAndAnalysisProtocol"
-              placeholder="Enter sampling and analysis protocol">
+            <label for="samplingAndAnalysisProtocol">Sampling &amp; Analysis Protocol</label>
+            <input type="text" id="samplingAndAnalysisProtocol"
+                   formControlName="samplingAndAnalysisProtocol"
+                   placeholder="Auto-filled from sample description" />
           </div>
         </div>
-        <div class="form-row">
+
+        <div class="form-row two-col">
+          <!-- ✅ AUTO-FILLED from selectedItem.formatNumber -->
           <div class="form-group">
             <label for="formatNumber">Format Number</label>
-            <input 
-              type="text" 
-              id="formatNumber" 
-              formControlName="formatNumber"
-              placeholder="Enter format number">
+            <input type="text" id="formatNumber"
+                   formControlName="formatNumber"
+                   placeholder="Auto-filled from sample description" />
           </div>
-
           <div class="form-group">
             <label for="partyReferenceNumber">Party Reference Number</label>
-            <input 
-              type="text" 
-              id="partyReferenceNumber" 
-              formControlName="partyReferenceNumber"
-              placeholder="Enter party reference number">
+            <input type="text" id="partyReferenceNumber"
+                   formControlName="partyReferenceNumber"
+                   placeholder="e.g. PRN-2024" />
           </div>
         </div>
 
-        <div class="form-row">
+        <div class="form-row two-col">
           <div class="form-group">
-            <label for="reportingDate">Reporting Date <span class="required">*</span></label>
-            <input 
-              type="date" 
-              id="reportingDate" 
-              formControlName="reportingDate"
-              [class.invalid]="isFieldInvalid('reportingDate')">
-            <span class="error-message" *ngIf="isFieldInvalid('reportingDate')">
-              Reporting date is required
-            </span>
+            <label for="reportingDate">Reporting Date <span class="req">*</span></label>
+            <input type="date" id="reportingDate" formControlName="reportingDate"
+                   [class.invalid]="isFieldInvalid('reportingDate')" />
+            <span class="err-msg" *ngIf="isFieldInvalid('reportingDate')">Reporting date is required</span>
           </div>
-
           <div class="form-group">
-            <label for="dateOfReceiving">Date of Receiving <span class="required">*</span></label>
-            <input 
-              type="date" 
-              id="dateOfReceiving" 
-              formControlName="dateOfReceiving"
-              [class.invalid]="isFieldInvalid('dateOfReceiving')">
-            <span class="error-message" *ngIf="isFieldInvalid('dateOfReceiving')">
-              Date of receiving is required
-            </span>
+            <label for="dateOfReceiving">Date of Receiving <span class="req">*</span></label>
+            <input type="date" id="dateOfReceiving" formControlName="dateOfReceiving"
+                   [class.invalid]="isFieldInvalid('dateOfReceiving')" />
+            <span class="err-msg" *ngIf="isFieldInvalid('dateOfReceiving')">Date of receiving is required</span>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group full-width">
             <label for="periodOfAnalysis">Period of Analysis</label>
-            <input 
-              type="text" 
-              id="periodOfAnalysis" 
-              formControlName="periodOfAnalysis"
-              placeholder="Enter period of analysis">
+            <input type="text" id="periodOfAnalysis" formControlName="periodOfAnalysis"
+                   placeholder="e.g. Jan 2024 – Feb 2024" />
           </div>
         </div>
 
+        <!-- ✅ Only Reset button here — Save button moved to bottom of page -->
         <div class="form-actions">
-          <button 
-            type="button" 
-            class="btn btn-secondary" 
-            (click)="onReset()"
-            [disabled]="isSubmitting">
+          <button type="button" class="btn btn-ghost" (click)="onReset()" [disabled]="isSavingAll">
             Reset
-          </button>
-          <button 
-            type="submit" 
-            class="btn btn-primary" 
-            [disabled]="isSubmitting">
-            <span *ngIf="!isSubmitting">Register Sample</span>
-            <span *ngIf="isSubmitting">Registering...</span>
           </button>
         </div>
       </form>
     </div>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         SECTION 2 — GENERAL INFORMATION
+    ══════════════════════════════════════════════════════ -->
+    <div class="section-card" id="section-info">
+
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-badge">02</span>
+          <div>
+            <h2 class="section-title">General Information</h2>
+            <p class="section-sub">Select a sample description to load parameters</p>
+          </div>
+        </div>
+        <div class="badge-count" *ngIf="informations.length > 0">
+          {{ informations.length }} entries
+        </div>
+        <div class="loader-inline" *ngIf="isLoadingDropDowns || isLoadingInfo">
+          <div class="mini-spinner"></div> <span>Loading…</span>
+        </div>
+      </div>
+
+      <!-- Add row from dropdown -->
+      <div class="inline-add-form" *ngIf="activeSampleDescription">
+        <div class="add-field">
+          <label>Parameter</label>
+          <div class="select-wrap">
+            <select class="form-input"
+                    [ngModel]="selectedInfoParam"
+                    (ngModelChange)="onInfoParamSelect($event)">
+              <option [ngValue]="null" disabled>— Select parameter —</option>
+              <option *ngFor="let p of generalInfoDropDowns" [ngValue]="p">{{ p.parameterName }}</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+        <div class="add-field">
+          <label>Value</label>
+          <input type="text" class="form-input" placeholder="Enter value" [(ngModel)]="newInfo.value" />
+        </div>
+        <button class="btn btn-accent"
+                (click)="addInformationRow()"
+                [disabled]="!newInfo.name">
+          ＋ Add Row
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-row"
+           *ngIf="!isLoadingInfo && !isLoadingDropDowns && informations.length === 0">
+        Select a sample description above to load general information parameters.
+      </div>
+
+      <!-- TABLE — ✅ No per-row Save buttons; only Delete remains -->
+      <div class="table-wrap" *ngIf="!isLoadingInfo && informations.length > 0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="th-sno">#</th>
+              <th>Parameter Name</th>
+              <th>Value</th>
+              <th class="th-status">Status</th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let info of informations; let i = index"
+                [class.unsaved-row]="isInfoRowUnsaved(info)">
+              <td class="td-sno">{{ i + 1 }}</td>
+              <td>
+                <input [(ngModel)]="info.name" class="cell-input" placeholder="Name" />
+              </td>
+              <td>
+                <input [(ngModel)]="info.value" class="cell-input" placeholder="Value" />
+              </td>
+              <td class="td-status">
+                <span class="badge-saved"   *ngIf="!isInfoRowUnsaved(info)">✓ Saved</span>
+                <span class="badge-unsaved" *ngIf="isInfoRowUnsaved(info)">● Unsaved</span>
+              </td>
+              <!-- ✅ Only Delete action — Save is handled by the global Save All button -->
+              <td class="td-actions">
+                <button class="btn-icon-act del"
+                        (click)="removeInformation(info, i)"
+                        title="Remove">🗑</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         SECTION 3 — RESULT PARAMETERS
+    ══════════════════════════════════════════════════════ -->
+    <div class="section-card" id="section-results">
+
+      <div class="section-header">
+        <div class="header-left">
+          <span class="section-badge">03</span>
+          <div>
+            <h2 class="section-title">Result Parameters</h2>
+            <p class="section-sub">Select a sample description to load result parameters</p>
+          </div>
+        </div>
+        <div class="badge-count" *ngIf="selectedSampleResults.length > 0">
+          {{ selectedSampleResults.length }} parameters
+        </div>
+        <div class="loader-inline" *ngIf="isLoadingResultDropDowns">
+          <div class="mini-spinner"></div> <span>Loading…</span>
+        </div>
+      </div>
+
+      <!-- Add from dropdown -->
+      <div class="inline-add-form result-add" *ngIf="activeSampleDescription">
+        <div class="add-field">
+          <label>Result Parameter</label>
+          <div class="select-wrap">
+            <select class="form-input"
+                    [ngModel]="selectedResultDropDown"
+                    (ngModelChange)="onResultDropDownSelect($event)">
+              <option [ngValue]="null" disabled>— Select result parameter —</option>
+              <option *ngFor="let r of resultDropDowns" [ngValue]="r">{{ r.name }}</option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+        <button class="btn btn-accent"
+                (click)="addResultFromDropDown()"
+                [disabled]="!selectedResultDropDown">
+          ＋ Add Selected
+        </button>
+        <button class="btn btn-ghost" (click)="addBlankResult()">
+          ＋ Custom Row
+        </button>
+      </div>
+
+      <div class="loader-row" *ngIf="isLoadingResults">
+        <div class="mini-spinner"></div>
+        <span>Loading saved parameters…</span>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-row"
+           *ngIf="!isLoadingResults && !isLoadingResultDropDowns && selectedSampleResults.length === 0">
+        Select a sample description above to load result parameters.
+      </div>
+
+      <!-- TABLE — ✅ No per-row Save buttons; only Delete remains -->
+      <div class="table-wrap" *ngIf="!isLoadingResults && selectedSampleResults.length > 0">
+        <table class="data-table result-table">
+          <thead>
+            <tr>
+              <th class="th-sno">#</th>
+              <th>Parameter Name</th>
+              <th class="th-unit">Unit</th>
+              <th>Result</th>
+              <th>Standard</th>
+              <th>Protocol</th>
+              <th class="th-nabl">NABL</th>
+              <th class="th-status">Status</th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of selectedSampleResults; let i = index"
+                [class.unsaved-row]="isResultRowUnsaved(r)">
+              <td class="td-sno">{{ i + 1 }}</td>
+              <td><input [(ngModel)]="r.name"       class="cell-input" placeholder="Parameter name" /></td>
+              <td><input [(ngModel)]="r.unit"       class="cell-input cell-unit" placeholder="Unit" /></td>
+              <td><input [(ngModel)]="r.result"     class="cell-input" placeholder="Result" /></td>
+              <td><input [(ngModel)]="r.standarded" class="cell-input" placeholder="Standard" /></td>
+              <td><input [(ngModel)]="r.protocal"   class="cell-input" placeholder="Protocol" /></td>
+              <td class="td-nabl">
+                <label class="toggle">
+                  <input type="checkbox" [(ngModel)]="r.isNABL" />
+                  <span class="toggle-track"></span>
+                </label>
+              </td>
+              <td class="td-status">
+                <span class="badge-saved"   *ngIf="!isResultRowUnsaved(r)">✓ Saved</span>
+                <span class="badge-unsaved" *ngIf="isResultRowUnsaved(r)">● Unsaved</span>
+              </td>
+              <!-- ✅ Only Delete action — Save is handled by the global Save All button -->
+              <td class="td-actions">
+                <button class="btn-icon-act del"
+                        (click)="deleteSampleResult(r, i)"
+                        title="Remove">🗑</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         ✅ GLOBAL SAVE ALL BUTTON — Fixed at bottom of page
+         Saves: Sample Registration + General Info + Results
+    ══════════════════════════════════════════════════════ -->
+    <div class="global-save-bar">
+      <div class="save-bar-info" *ngIf="submitSuccess">
+        <span class="dot success"></span>
+        Sample registered: <strong>{{ registeredSampleNumber }}</strong>
+        &nbsp;·&nbsp; Report: <strong>{{ registeredReportNumber }}</strong>
+      </div>
+      <div class="save-bar-info" *ngIf="!submitSuccess">
+        <span class="dot pending"></span>
+        Fill in all sections, then click Save All to register &amp; save everything
+      </div>
+      <button class="btn btn-save-all"
+              (click)="saveAll()"
+              [disabled]="isSavingAll">
+        <span class="btn-spinner" *ngIf="isSavingAll"></span>
+        <span>{{ isSavingAll ? 'Saving…' : '💾 Save All' }}</span>
+      </button>
+    </div>
+
   </div>
 </div>

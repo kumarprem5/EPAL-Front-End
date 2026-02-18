@@ -189,10 +189,10 @@
             />
           </td>
           <td class="action-cell">
-            <button (click)="updateInformation(info)" class="btn-save">
+            <!-- <button (click)="updateInformation(info)" class="btn-save">
               <span class="btn-icon">💾</span>
               Update
-            </button>
+            </button> -->
             <button (click)="removeInformation(info, i)" class="btn-remove">
               <span class="btn-icon">🗑️</span>
               Remove
@@ -252,7 +252,7 @@
           class="form-input cascade-select"
           [(ngModel)]="selectedSubCategory"
           (ngModelChange)="onSubCategoryChange($event)"
-          [compareWith]="compareSubCategory"
+          
           [disabled]="!selectedMasterCategory || isLoadingSubCategories"
         >
           <option [ngValue]="null" disabled>
@@ -437,10 +437,10 @@
             />
           </td>
           <td class="action-cell">
-            <button (click)="updateSampleResult(result)" class="btn-save">
+            <!-- <button (click)="updateSampleResult(result)" class="btn-save">
               <span class="btn-icon">💾</span>
               Update
-            </button>
+            </button> -->
             <button (click)="deleteSampleResult(result, i)" class="btn-remove">
               <span class="btn-icon">🗑️</span>
               Remove
