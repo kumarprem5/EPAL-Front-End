@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
+
 export interface SampleDescriptionRequest {
   sampleDescription: string;
 }
@@ -58,19 +59,39 @@ export interface ApiResponse<T> {
   status: 'SUCCESS' | 'ERROR';
 }
 
-// Sample Result Interface (matches backend SampleResult entity)
+// ── SampleResultParameterDropDown — template/source entity from backend ───────
 export interface SampleResult {
   id?: number;
   unit: string;
   name: string;
   result: string;
+  reportNumber?: string;
   sampleDescription: string;
   protocal: string;
   standarded: string;
+  parameterType?: string;
+  scopeYear?: string;
   isNABL?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+// ── TestParameterResult — actual saved result row (TestParameterResultRequest) ─
+// Fields map directly to TestParameterResultRequest on the backend.
+// Pre-filled from SampleResultParameterDropDown templates; user edits resultValue etc.
+export interface TestParameterResult {
+  id?:                number;
+  parameterName:      string;    // ← from SampleResult.name
+  unit:               string;    // ← from SampleResult.unit
+  resultValue:        string;    // user fills this
+  detectionLimit:     string;    // user fills this
+  specificationLimit: string;    // ← from SampleResult.standarded
+  protocolUsed:       string;    // ← from SampleResult.protocal
+  complies:           boolean;   // checkbox
+  remarks:            string;    // user fills this
+  reportNo:           string;    // stamped on Save All
+}
+
 
 @Injectable({
   providedIn: 'root',
@@ -118,7 +139,6 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
   }
 
   // ── GENERAL INFO DROPDOWN TEMPLATES ──────────────────────────────────────
-  // Returns TestParameter templates (NOT saved general info rows)
 
   getGeneralInfoDropDownsBySampleDescription(sampleDescription: string): Observable<ApiResponse<TestParameter[]>> {
     return this.http.post<ApiResponse<TestParameter[]>>(
@@ -129,11 +149,91 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
   }
 
   // ── RESULT DROPDOWN TEMPLATES ─────────────────────────────────────────────
-  // Returns SampleResultParameterDropDown templates (NOT saved sample results)
+  // POST /sample-result/find-by-description → raw List<SampleResultParameterDropDown>
+  // Wrapped into ApiResponse shape for consistent component handling.
 
   getResultDropDownsBySampleDescription(sampleDescription: string): Observable<ApiResponse<SampleResult[]>> {
-    return this.http.post<ApiResponse<SampleResult[]>>(
-      `${this.baseUrl}/sample-result/dropdown/by-description`,
+    return this.http.post<any>(
+      `${this.baseUrl}/sample-result/find-by-description`,
+      { sampleDescription },
+      this.getHeaders()
+    ).pipe(
+      map((data: any) => {
+        if (Array.isArray(data)) {
+          return { status: 'SUCCESS', data, code: '200', message: 'OK' } as ApiResponse<SampleResult[]>;
+        }
+        return data as ApiResponse<SampleResult[]>;
+      })
+    );
+  }
+
+  // ── SAMPLE RESULT DROPDOWN CRUD ───────────────────────────────────────────
+
+  createSampleResult(data: SampleResult): Observable<SampleResult> {
+    return this.http.post<SampleResult>(`${this.baseUrl}/sample-result/create`, data, this.getHeaders());
+  }
+
+  updateSampleResult(data: SampleResult): Observable<SampleResult> {
+    return this.http.put<SampleResult>(`${this.baseUrl}/sample-result/update`, data, this.getHeaders());
+  }
+
+  findSampleResultsByDescription(sampleDescription: string): Observable<ApiResponse<SampleResult[]>> {
+    return this.http.post<any>(
+      `${this.baseUrl}/sample-result/find-by-description`,
+      { sampleDescription },
+      this.getHeaders()
+    ).pipe(
+      map((data: any) => {
+        if (Array.isArray(data)) {
+          return { status: 'SUCCESS', data, code: '200', message: 'OK' } as ApiResponse<SampleResult[]>;
+        }
+        return data as ApiResponse<SampleResult[]>;
+      })
+    );
+  }
+
+  deleteSampleResult(id: number): Observable<string> {
+    return this.http.post<string>(
+      `${this.baseUrl}/sample-result/delete`,
+      { result: id.toString() },
+      this.getHeaders()
+    );
+  }
+
+  // ── TEST PARAMETER RESULT CRUD ────────────────────────────────────────────
+  // POST /create/result    → creates TestParameterResult row (RestApiResponse)
+  // PUT  /update/result    → updates TestParameterResult row (RestApiResponse)
+  // GET  /result/by-report-no?reportNo=XX → list of saved results for a report
+
+  createTestParameterResult(data: TestParameterResult): Observable<ApiResponse<TestParameterResult>> {
+    return this.http.post<ApiResponse<TestParameterResult>>(
+      `${this.baseUrl}/create/result`,
+      data,
+      this.getHeaders()
+    );
+  }
+
+  updateTestParameterResult(data: TestParameterResult): Observable<ApiResponse<TestParameterResult>> {
+    return this.http.put<ApiResponse<TestParameterResult>>(
+      `${this.baseUrl}/update/result`,
+      data,
+      this.getHeaders()
+    );
+  }
+
+  getTestParameterResultsByReportNo(reportNo: string): Observable<ApiResponse<TestParameterResult[]>> {
+    return this.http.get<ApiResponse<TestParameterResult[]>>(
+      `${this.baseUrl}/result/by-report-no`,
+      {
+        headers: this.getHeaders().headers,
+        params: { reportNo },
+      }
+    );
+  }
+
+  getTestParametersBySampleDescription(sampleDescription: string): Observable<ApiResponse<TestParameter[]>> {
+    return this.http.post<ApiResponse<TestParameter[]>>(
+      `${this.baseUrl}/test/parameter/by/sample-description`,
       { sampleDescription },
       this.getHeaders()
     );
@@ -156,38 +256,4 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
   getResultParametersByGroup(parameterGroupId: number): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/parameter-result/sub-category-id`, { id: parameterGroupId }, this.getHeaders());
   }
-
-  // ── SAMPLE RESULT CRUD ────────────────────────────────────────────────────
-
-  createSampleResult(data: SampleResult): Observable<ApiResponse<SampleResult>> {
-    return this.http.post<ApiResponse<SampleResult>>(`${this.baseUrl}/sample-result/create`, data, this.getHeaders());
-  }
-
-  updateSampleResult(data: SampleResult): Observable<ApiResponse<SampleResult>> {
-    return this.http.put<ApiResponse<SampleResult>>(`${this.baseUrl}/sample-result/update`, data, this.getHeaders());
-  }
-
-  findSampleResultsByDescription(sampleDescription: string): Observable<ApiResponse<SampleResult[]>> {
-    return this.http.post<ApiResponse<SampleResult[]>>(
-      `${this.baseUrl}/sample-result/find-by-description`,
-      { sampleDescription },
-      this.getHeaders()
-    );
-  }
-
-  deleteSampleResult(id: number): Observable<ApiResponse<any>> {
-    return this.http.delete<ApiResponse<any>>(
-      `${this.baseUrl}/sample-result/delete`,
-      { headers: this.getHeaders().headers, params: { id: id.toString() } }
-    );
-  }
-
-  getTestParametersBySampleDescription(sampleDescription: string): Observable<ApiResponse<TestParameter[]>> {
-  return this.http.post<ApiResponse<TestParameter[]>>(
-    `${this.baseUrl}/test/parameter/by/sample-description`,
-    { sampleDescription },
-    this.getHeaders()
-  );
-}
-
 }

@@ -31,9 +31,7 @@
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════
-         GLOBAL ALERT
-    ══════════════════════════════════════════════════════ -->
+    <!-- GLOBAL ALERT -->
     <div *ngIf="uiMessage"
          class="ui-alert"
          [class.success]="uiMessageType === 'success'"
@@ -61,7 +59,6 @@
         </div>
       </div>
 
-      <!-- ✅ Removed (ngSubmit) — form is now submitted via the bottom Save All button -->
       <form [formGroup]="sampleForm">
 
         <div class="form-row">
@@ -99,7 +96,6 @@
                 <option value="">
                   {{ loadingDescriptions ? 'Loading descriptions…' : 'Select sample description' }}
                 </option>
-                <!-- ✅ Bind to d.sampleDescription string — full object available via .find() -->
                 <option *ngFor="let d of sampleDescriptions" [value]="d.sampleDescription">
                   {{ d.sampleDescription }}
                 </option>
@@ -112,7 +108,6 @@
           </div>
         </div>
 
-        <!-- ✅ AUTO-FILLED from selectedItem.analysisProtocol -->
         <div class="form-row">
           <div class="form-group full-width">
             <label for="samplingAndAnalysisProtocol">Sampling &amp; Analysis Protocol</label>
@@ -123,7 +118,6 @@
         </div>
 
         <div class="form-row two-col">
-          <!-- ✅ AUTO-FILLED from selectedItem.formatNumber -->
           <div class="form-group">
             <label for="formatNumber">Format Number</label>
             <input type="text" id="formatNumber"
@@ -140,12 +134,6 @@
 
         <div class="form-row two-col">
           <div class="form-group">
-            <label for="reportingDate">Reporting Date <span class="req">*</span></label>
-            <input type="date" id="reportingDate" formControlName="reportingDate"
-                   [class.invalid]="isFieldInvalid('reportingDate')" />
-            <span class="err-msg" *ngIf="isFieldInvalid('reportingDate')">Reporting date is required</span>
-          </div>
-          <div class="form-group">
             <label for="dateOfReceiving">Date of Receiving <span class="req">*</span></label>
             <input type="date" id="dateOfReceiving" formControlName="dateOfReceiving"
                    [class.invalid]="isFieldInvalid('dateOfReceiving')" />
@@ -153,15 +141,6 @@
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group full-width">
-            <label for="periodOfAnalysis">Period of Analysis</label>
-            <input type="text" id="periodOfAnalysis" formControlName="periodOfAnalysis"
-                   placeholder="e.g. Jan 2024 – Feb 2024" />
-          </div>
-        </div>
-
-        <!-- ✅ Only Reset button here — Save button moved to bottom of page -->
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" (click)="onReset()" [disabled]="isSavingAll">
             Reset
@@ -195,7 +174,7 @@
       <!-- Add row from dropdown -->
       <div class="inline-add-form" *ngIf="activeSampleDescription">
         <div class="add-field">
-          <label>Parameter</label>
+          <label>General Info</label>
           <div class="select-wrap">
             <select class="form-input"
                     [ngModel]="selectedInfoParam"
@@ -217,19 +196,17 @@
         </button>
       </div>
 
-      <!-- Empty state -->
       <div class="empty-row"
            *ngIf="!isLoadingInfo && !isLoadingDropDowns && informations.length === 0">
         Select a sample description above to load general information parameters.
       </div>
 
-      <!-- TABLE — ✅ No per-row Save buttons; only Delete remains -->
       <div class="table-wrap" *ngIf="!isLoadingInfo && informations.length > 0">
         <table class="data-table">
           <thead>
             <tr>
               <th class="th-sno">#</th>
-              <th>Parameter Name</th>
+              <th>Sample Information</th>
               <th>Value</th>
               <th class="th-status">Status</th>
               <th class="th-actions">Actions</th>
@@ -239,21 +216,14 @@
             <tr *ngFor="let info of informations; let i = index"
                 [class.unsaved-row]="isInfoRowUnsaved(info)">
               <td class="td-sno">{{ i + 1 }}</td>
-              <td>
-                <input [(ngModel)]="info.name" class="cell-input" placeholder="Name" />
-              </td>
-              <td>
-                <input [(ngModel)]="info.value" class="cell-input" placeholder="Value" />
-              </td>
+              <td><input [(ngModel)]="info.name"  class="cell-input" placeholder="Name" /></td>
+              <td><input [(ngModel)]="info.value" class="cell-input" placeholder="Value" /></td>
               <td class="td-status">
                 <span class="badge-saved"   *ngIf="!isInfoRowUnsaved(info)">✓ Saved</span>
                 <span class="badge-unsaved" *ngIf="isInfoRowUnsaved(info)">● Unsaved</span>
               </td>
-              <!-- ✅ Only Delete action — Save is handled by the global Save All button -->
               <td class="td-actions">
-                <button class="btn-icon-act del"
-                        (click)="removeInformation(info, i)"
-                        title="Remove">🗑</button>
+                <button class="btn-icon-act del" (click)="removeInformation(info, i)" title="Remove">🗑</button>
               </td>
             </tr>
           </tbody>
@@ -263,7 +233,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         SECTION 3 — RESULT PARAMETERS
+         SECTION 3 — RESULT PARAMETERS (TestParameterResult)
     ══════════════════════════════════════════════════════ -->
     <div class="section-card" id="section-results">
 
@@ -272,11 +242,11 @@
           <span class="section-badge">03</span>
           <div>
             <h2 class="section-title">Result Parameters</h2>
-            <p class="section-sub">Select a sample description to load result parameters</p>
+            <p class="section-sub">Pre-filled from sample description — edit values and save</p>
           </div>
         </div>
-        <div class="badge-count" *ngIf="selectedSampleResults.length > 0">
-          {{ selectedSampleResults.length }} parameters
+        <div class="badge-count" *ngIf="testParameterResults.length > 0">
+          {{ testParameterResults.length }} parameters
         </div>
         <div class="loader-inline" *ngIf="isLoadingResultDropDowns">
           <div class="mini-spinner"></div> <span>Loading…</span>
@@ -286,12 +256,12 @@
       <!-- Add from dropdown -->
       <div class="inline-add-form result-add" *ngIf="activeSampleDescription">
         <div class="add-field">
-          <label>Result Parameter</label>
+          <label>Add Parameter</label>
           <div class="select-wrap">
             <select class="form-input"
                     [ngModel]="selectedResultDropDown"
                     (ngModelChange)="onResultDropDownSelect($event)">
-              <option [ngValue]="null" disabled>— Select result parameter —</option>
+              <option [ngValue]="null" disabled>— Select parameter to add —</option>
               <option *ngFor="let r of resultDropDowns" [ngValue]="r">{{ r.name }}</option>
             </select>
             <span class="select-arrow">▾</span>
@@ -312,51 +282,98 @@
         <span>Loading saved parameters…</span>
       </div>
 
-      <!-- Empty state -->
       <div class="empty-row"
-           *ngIf="!isLoadingResults && !isLoadingResultDropDowns && selectedSampleResults.length === 0">
+           *ngIf="!isLoadingResults && !isLoadingResultDropDowns && testParameterResults.length === 0">
         Select a sample description above to load result parameters.
       </div>
 
-      <!-- TABLE — ✅ No per-row Save buttons; only Delete remains -->
-      <div class="table-wrap" *ngIf="!isLoadingResults && selectedSampleResults.length > 0">
+      <!-- ✅ TABLE with TestParameterResult columns matching TestParameterResultRequest -->
+      <div class="table-wrap" *ngIf="!isLoadingResults && testParameterResults.length > 0">
         <table class="data-table result-table">
           <thead>
             <tr>
               <th class="th-sno">#</th>
               <th>Parameter Name</th>
               <th class="th-unit">Unit</th>
-              <th>Result</th>
-              <th>Standard</th>
-              <th>Protocol</th>
-              <th class="th-nabl">NABL</th>
+              <th>Result Value</th>
+              <th>Detection Limit</th>
+              <th>Specification Limit</th>
+              <th>Protocol Used</th>
+              <th class="th-complies">Complies</th>
+              <th>Remarks</th>
               <th class="th-status">Status</th>
               <th class="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of selectedSampleResults; let i = index"
-                [class.unsaved-row]="isResultRowUnsaved(r)">
+            <tr *ngFor="let r of testParameterResults; let i = index"
+                [class.unsaved-row]="isTestResultRowUnsaved(r)">
               <td class="td-sno">{{ i + 1 }}</td>
-              <td><input [(ngModel)]="r.name"       class="cell-input" placeholder="Parameter name" /></td>
-              <td><input [(ngModel)]="r.unit"       class="cell-input cell-unit" placeholder="Unit" /></td>
-              <td><input [(ngModel)]="r.result"     class="cell-input" placeholder="Result" /></td>
-              <td><input [(ngModel)]="r.standarded" class="cell-input" placeholder="Standard" /></td>
-              <td><input [(ngModel)]="r.protocal"   class="cell-input" placeholder="Protocol" /></td>
-              <td class="td-nabl">
+
+              <!-- parameterName — pre-filled, still editable -->
+              <td>
+                <input [(ngModel)]="r.parameterName"
+                       class="cell-input"
+                       placeholder="Parameter name" />
+              </td>
+
+              <!-- unit — pre-filled, still editable -->
+              <td>
+                <input [(ngModel)]="r.unit"
+                       class="cell-input cell-unit"
+                       placeholder="Unit" />
+              </td>
+
+              <!-- resultValue — user enters this -->
+              <td>
+                <input [(ngModel)]="r.resultValue"
+                       class="cell-input"
+                       placeholder="e.g. 6.82 / Absent" />
+              </td>
+
+              <!-- detectionLimit — user enters this -->
+              <td>
+                <input [(ngModel)]="r.detectionLimit"
+                       class="cell-input"
+                       placeholder="e.g. DL-0.02" />
+              </td>
+
+              <!-- specificationLimit — pre-filled from standarded, editable -->
+              <td>
+                <input [(ngModel)]="r.specificationLimit"
+                       class="cell-input"
+                       placeholder="e.g. 6.0 to 8.5" />
+              </td>
+
+              <!-- protocolUsed — pre-filled from protocal, editable -->
+              <td>
+                <input [(ngModel)]="r.protocolUsed"
+                       class="cell-input"
+                       placeholder="e.g. IS:3025 Part-11" />
+              </td>
+
+              <!-- complies — checkbox -->
+              <td class="td-complies">
                 <label class="toggle">
-                  <input type="checkbox" [(ngModel)]="r.isNABL" />
+                  <input type="checkbox" [(ngModel)]="r.complies" />
                   <span class="toggle-track"></span>
                 </label>
               </td>
-              <td class="td-status">
-                <span class="badge-saved"   *ngIf="!isResultRowUnsaved(r)">✓ Saved</span>
-                <span class="badge-unsaved" *ngIf="isResultRowUnsaved(r)">● Unsaved</span>
+
+              <!-- remarks — user enters this -->
+              <td>
+                <input [(ngModel)]="r.remarks"
+                       class="cell-input"
+                       placeholder="Remarks" />
               </td>
-              <!-- ✅ Only Delete action — Save is handled by the global Save All button -->
+
+              <td class="td-status">
+                <span class="badge-saved"   *ngIf="!isTestResultRowUnsaved(r)">✓ Saved</span>
+                <span class="badge-unsaved" *ngIf="isTestResultRowUnsaved(r)">● Unsaved</span>
+              </td>
               <td class="td-actions">
                 <button class="btn-icon-act del"
-                        (click)="deleteSampleResult(r, i)"
+                        (click)="deleteTestResult(r, i)"
                         title="Remove">🗑</button>
               </td>
             </tr>
@@ -367,8 +384,7 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         ✅ GLOBAL SAVE ALL BUTTON — Fixed at bottom of page
-         Saves: Sample Registration + General Info + Results
+         GLOBAL SAVE ALL BUTTON
     ══════════════════════════════════════════════════════ -->
     <div class="global-save-bar">
       <div class="save-bar-info" *ngIf="submitSuccess">
