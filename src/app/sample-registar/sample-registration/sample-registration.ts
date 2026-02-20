@@ -96,6 +96,7 @@ function templateToTestResult(t: any, reportNo = ''): TestParameterResult {
 export class SampleRegistration   implements OnInit, OnDestroy {
 
 
+  
   // ── Form ──────────────────────────────────────────────────────────────────
   sampleForm!:   FormGroup;
   submitSuccess  = false;
@@ -122,10 +123,10 @@ export class SampleRegistration   implements OnInit, OnDestroy {
   isLoadingDropDowns    = false;
   generalInfoSaved      = false;
 
-  // ── Step 3 — Result Parameters (TestParameterResult rows) ─────────────────
-  resultDropDowns:         ResultDropDown[]         = [];   // source templates from SampleResultParameterDropDown
-  selectedResultDropDown:  ResultDropDown | null    = null;
-  testParameterResults:    TestParameterResult[]    = [];   // rows to display & save
+  // ── Step 3 — Result Parameters ────────────────────────────────────────────
+  resultDropDowns:         ResultDropDown[]      = [];
+  selectedResultDropDown:  ResultDropDown | null = null;
+  testParameterResults:    TestParameterResult[] = [];
   isLoadingResults         = false;
   isLoadingResultDropDowns = false;
 
@@ -197,25 +198,20 @@ export class SampleRegistration   implements OnInit, OnDestroy {
     });
 
     // Reset all table data
-    this.informations         = [];
-    this.testParameterResults = [];
-    this.generalInfoSaved     = false;
-    this.generalInfoDropDowns = [];
-    this.resultDropDowns      = [];
-    this.selectedInfoParam    = null;
+    this.informations          = [];
+    this.testParameterResults  = [];
+    this.generalInfoSaved      = false;
+    this.generalInfoDropDowns  = [];
+    this.resultDropDowns       = [];
+    this.selectedInfoParam     = null;
     this.selectedResultDropDown = null;
-    this.newInfo = { name: '', value: '', reportNumber: this.registeredReportNumber };
+    this.newInfo = { name: '', value: '', reportNumber: '' };
 
     this.loadGeneralInfoDropDowns(this.activeSampleDescription);
     this.loadResultDropDowns(this.activeSampleDescription);
-
-    if (this.registeredReportNumber) {
-      this.loadSavedGeneralInfo(this.registeredReportNumber);
-      this.loadSavedTestResults(this.registeredReportNumber);
-    }
   }
 
-  // ── ✅ MASTER SAVE ALL ─────────────────────────────────────────────────────
+  // ── ✅ SAVE ALL — Always creates NEW entries every time ────────────────────
 
   saveAll(): void {
     if (this.sampleForm.invalid) {
@@ -226,47 +222,71 @@ export class SampleRegistration   implements OnInit, OnDestroy {
 
     this.isSavingAll = true;
 
-    if (!this.submitSuccess) {
-      this.sampleService.addSample(this.sampleForm.value)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (res) => {
-            this.submitSuccess          = true;
-            this.registeredSampleNumber = res.data?.sampleNumber ?? '';
-            this.registeredReportNumber = res.data?.reportNumber  ?? '';
-            this.newInfo.reportNumber   = this.registeredReportNumber;
+    // ✅ ALWAYS register a brand-new sample on every Save All click
+    this.sampleService.addSample(this.sampleForm.value)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.submitSuccess          = true;
+          this.registeredSampleNumber = res.data?.sampleNumber ?? '';
+          this.registeredReportNumber = res.data?.reportNumber  ?? '';
+          this.newInfo.reportNumber   = this.registeredReportNumber;
 
-            // Stamp reportNo on general info rows
-            this.informations = this.informations.map(info => ({
-              ...info,
-              reportNumber:      this.registeredReportNumber,
-              sampleDescription: this.activeSampleDescription,
-            }));
+          // ✅ Strip all existing IDs so every row is treated as NEW
+          this.informations = this.informations.map(info => ({
+            ...info,
+            id:                undefined,          // ← force CREATE not UPDATE
+            reportNumber:      this.registeredReportNumber,
+            sampleDescription: this.activeSampleDescription,
+          }));
 
-            // ✅ Stamp reportNo on all TestParameterResult rows
-            this.testParameterResults = this.testParameterResults.map(r => ({
-              ...r,
-              reportNo: this.registeredReportNumber,
-            }));
+          this.testParameterResults = this.testParameterResults.map(r => ({
+            ...r,
+            id:       undefined,                   // ← force CREATE not UPDATE
+            reportNo: this.registeredReportNumber,
+          }));
 
-            this.persistInfoAndResults(() => {
-              this.isSavingAll = false;
-              this.showMessage('Sample, General Info & Results saved successfully! ✓', 'success');
-            });
-          },
-          error: (err) => {
+          this.persistInfoAndResults(() => {
             this.isSavingAll = false;
-            this.setError(err?.error?.message ?? 'Failed to register sample.');
-          },
-        });
-    } else {
-      this.persistInfoAndResults(() => {
-        this.isSavingAll = false;
-        this.showMessage('General Info & Results saved successfully! ✓', 'success');
+            this.showMessage(
+              `New entries created! Sample: ${this.registeredSampleNumber} · Report: ${this.registeredReportNumber}`,
+              'success'
+            );
+
+            // ✅ Reset form & state so user can register another fresh sample
+            // this.resetAfterSave();
+          });
+        },
+        error: (err) => {
+          this.isSavingAll = false;
+          this.setError(err?.error?.message ?? 'Failed to register sample.');
+        },
       });
-    }
+  }
+  /**
+   * Resets form and table state after a successful Save All,
+   * so the next Save All will create completely fresh entries again.
+   */
+  private resetAfterSave(): void {
+    this.sampleForm.reset();
+    this.submitSuccess           = false;
+    this.informations            = [];
+    this.testParameterResults    = [];
+    this.generalInfoSaved        = false;
+    this.activeSampleDescription = '';
+    this.registeredSampleNumber  = '';
+    this.registeredReportNumber  = '';
+    this.generalInfoDropDowns    = [];
+    this.resultDropDowns         = [];
+    this.selectedInfoParam       = null;
+    this.selectedResultDropDown  = null;
+    this.newInfo                 = { name: '', value: '', reportNumber: '' };
   }
 
+  /**
+   * Persists all General Info and TestParameterResult rows.
+   * Since IDs were stripped before calling this, every row calls CREATE.
+   */
   private persistInfoAndResults(onDone: () => void): void {
     const requests$: Observable<any>[] = [];
 
@@ -275,9 +295,8 @@ export class SampleRegistration   implements OnInit, OnDestroy {
       info.reportNumber      = this.registeredReportNumber;
       info.sampleDescription = this.activeSampleDescription;
 
-      const req$ = typeof info.id !== 'number'
-        ? this.infoService.addInformation(info)
-        : this.infoService.updateInformation(info);
+      // ✅ id is undefined → always addInformation (CREATE)
+      const req$ = this.infoService.addInformation(info);
 
       const tracked$ = new Observable(observer => {
         req$.pipe(takeUntil(this.destroy$)).subscribe({
@@ -302,21 +321,15 @@ export class SampleRegistration   implements OnInit, OnDestroy {
     });
 
     // ── TestParameterResult rows ──────────────────────────────────────────────
-    // ✅ Unsaved rows (no id) → createTestParameterResult
-    // ✅ Saved rows (has id)  → updateTestParameterResult
     this.testParameterResults.forEach((result, idx) => {
       result.reportNo = this.registeredReportNumber;
 
-      const req$ = typeof result.id !== 'number'
-        ? this.sampleService.createTestParameterResult(result)
-        : this.sampleService.updateTestParameterResult(result);
-        console.log(result);
-        
+      // ✅ id is undefined → always createTestParameterResult (CREATE)
+      const req$ = this.sampleService.createTestParameterResult(result);
 
       const tracked$ = new Observable(observer => {
         req$.pipe(takeUntil(this.destroy$)).subscribe({
           next: (res: any) => {
-            // Backend returns RestApiResponse — grab id from res.data
             const savedData = res?.data ?? res;
             if (savedData?.id != null) {
               this.testParameterResults[idx] = { ...result, id: Number(savedData.id) };
@@ -384,11 +397,12 @@ export class SampleRegistration   implements OnInit, OnDestroy {
               ...item,
               choiceList: parseChoices(item.values ?? item.defaultValues),
             }));
+
             if (this.informations.length === 0) {
               this.informations = this.generalInfoDropDowns.map(param => ({
                 name:              param.parameterName,
                 value:             pickDefaultValue(param),
-                reportNumber:      this.registeredReportNumber,
+                reportNumber:      '',
                 sampleDescription: this.activeSampleDescription,
               }));
             }
@@ -413,8 +427,8 @@ export class SampleRegistration   implements OnInit, OnDestroy {
           if (res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
             this.informations = res.data
               .map((raw: any) => toInfoModel(raw, this.activeSampleDescription))
-              .filter((m): m is GeneralInformationModel => m !== null && typeof m.id === 'number');
-            this.generalInfoSaved = this.informations.length > 0;
+              .filter((m): m is GeneralInformationModel => m !== null);
+            this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
           }
         },
         error: (err) => {
@@ -440,47 +454,22 @@ export class SampleRegistration   implements OnInit, OnDestroy {
     this.informations = [...this.informations, {
       name:              this.newInfo.name,
       value:             this.newInfo.value,
-      reportNumber:      this.registeredReportNumber,
+      reportNumber:      '',
       sampleDescription: this.activeSampleDescription,
     }];
     this.selectedInfoParam = null;
-    this.newInfo = { name: '', value: '', reportNumber: this.registeredReportNumber };
+    this.newInfo = { name: '', value: '', reportNumber: '' };
   }
 
   removeInformation(info: GeneralInformationModel, index: number): void {
-    if (typeof info.id !== 'number') {
-      this.informations.splice(index, 1);
-      this.informations     = [...this.informations];
-      this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
-      return;
-    }
-    if (!confirm(`Remove "${info.name}"?`)) return;
-    this.infoService.deleteInformation(info.id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          const ok = res == null
-            || (res as any)?.status === 'SUCCESS'
-            || (typeof res === 'object' && (res as any)?.status !== 'ERROR');
-          if (ok) {
-            this.informations.splice(index, 1);
-            this.informations     = [...this.informations];
-            this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
-            this.showMessage('Removed ✓', 'success');
-          } else {
-            this.showMessage((res as any)?.message ?? 'Delete failed', 'error');
-          }
-        },
-        error: () => this.showMessage('Delete failed', 'error'),
-      });
+    // ✅ Since we always create new, just remove locally — no API delete needed
+    this.informations.splice(index, 1);
+    this.informations     = [...this.informations];
+    this.generalInfoSaved = this.informations.some(i => typeof i.id === 'number');
   }
 
   // ── Step 3: Result Parameters ──────────────────────────────────────────────
 
-  /**
-   * Loads SampleResultParameterDropDown templates, maps them into
-   * editable TestParameterResult rows (without id so they save as new).
-   */
   loadResultDropDowns(sampleDescription: string): void {
     if (!sampleDescription) return;
     this.isLoadingResultDropDowns = true;
@@ -492,7 +481,6 @@ export class SampleRegistration   implements OnInit, OnDestroy {
           this.isLoadingResultDropDowns = false;
 
           if (res.status === 'SUCCESS' && Array.isArray(res.data) && res.data.length > 0) {
-            // Keep full template objects for the "Add from dropdown" feature
             this.resultDropDowns = res.data.map((t: any) => ({
               id:                t.id,
               name:              t.name        ?? '',
@@ -505,16 +493,12 @@ export class SampleRegistration   implements OnInit, OnDestroy {
               scopeYear:         t.scopeYear    ?? null,
             }));
 
-            // ✅ Pre-populate editable TestParameterResult rows from templates
+            // Pre-populate table rows without id (fresh entries)
             if (this.testParameterResults.length === 0) {
               this.testParameterResults = res.data.map((t: any) =>
-                templateToTestResult(t, this.registeredReportNumber)
+                templateToTestResult(t, '')  // reportNo blank until Save All stamps it
               );
             }
-
-            console.log('[loadResultDropDowns] rows loaded:', this.testParameterResults.length);
-          } else {
-            console.warn('[loadResultDropDowns] No data:', res);
           }
         },
         error: (err) => {
@@ -525,7 +509,6 @@ export class SampleRegistration   implements OnInit, OnDestroy {
       });
   }
 
-  /** Load previously saved TestParameterResult rows for an existing report. */
   loadSavedTestResults(reportNo: string): void {
     if (!reportNo) return;
     this.isLoadingResults = true;
@@ -550,17 +533,15 @@ export class SampleRegistration   implements OnInit, OnDestroy {
     this.selectedResultDropDown = selected;
   }
 
-  /** Add a template row from the dropdown picker. */
   addResultFromDropDown(): void {
     if (!this.selectedResultDropDown) return;
     this.testParameterResults = [
       ...this.testParameterResults,
-      templateToTestResult(this.selectedResultDropDown, this.registeredReportNumber),
+      templateToTestResult(this.selectedResultDropDown, ''),
     ];
     this.selectedResultDropDown = null;
   }
 
-  /** Add a blank custom row. */
   addBlankResult(): void {
     this.testParameterResults = [...this.testParameterResults, {
       parameterName:      '',
@@ -571,23 +552,14 @@ export class SampleRegistration   implements OnInit, OnDestroy {
       protocolUsed:       '',
       complies:           false,
       remarks:            '',
-      reportNo:           this.registeredReportNumber,
+      reportNo:           '',
     }];
   }
 
   deleteTestResult(result: TestParameterResult, index: number): void {
-    // Unsaved row — remove locally only
-    if (typeof result.id !== 'number') {
-      this.testParameterResults.splice(index, 1);
-      this.testParameterResults = [...this.testParameterResults];
-      return;
-    }
-    // Saved rows: no delete endpoint provided yet — remove locally and show notice
-    // TODO: add delete endpoint if backend provides one
-    if (!confirm(`Remove "${result.parameterName}"?`)) return;
+    // ✅ Always create-only mode — just remove locally
     this.testParameterResults.splice(index, 1);
     this.testParameterResults = [...this.testParameterResults];
-    this.showMessage('Removed locally (will not affect saved data until backend delete endpoint is added)', 'success');
   }
 
   // ── Utilities ──────────────────────────────────────────────────────────────
@@ -597,8 +569,8 @@ export class SampleRegistration   implements OnInit, OnDestroy {
     return !!(f?.invalid && (f.dirty || f.touched));
   }
 
-  isInfoRowUnsaved(info: GeneralInformationModel):         boolean { return typeof info.id   !== 'number'; }
-  isTestResultRowUnsaved(result: TestParameterResult):     boolean { return typeof result.id !== 'number'; }
+  isInfoRowUnsaved(info: GeneralInformationModel):     boolean { return typeof info.id   !== 'number'; }
+  isTestResultRowUnsaved(r: TestParameterResult):      boolean { return typeof r.id      !== 'number'; }
 
   private setError(msg: string): void {
     this.submitError  = true;
