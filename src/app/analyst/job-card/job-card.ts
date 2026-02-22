@@ -12,14 +12,15 @@ import {
 import { Router } from '@angular/router';
 
 interface GroupedJobCard {
-  reportNo:           string;
-  sampleDescription:  string;
-  projectName:        string;
-  labName:            string;
-  status:             JobCardStatus;
-  parameters:         JobCardModel[];
-  analystName:        string;
-  createdAt:          string;
+  reportNo:          string;
+  sampleNumber:      string;
+  sampleDescription: string;
+  projectName:       string;
+  labName:           string;
+  status:            JobCardStatus;
+  parameters:        JobCardModel[];
+  analystName:       string;
+  createdAt:         string;
 }
 
 @Component({
@@ -29,15 +30,24 @@ interface GroupedJobCard {
   styleUrl: './job-card.css',
 })
 export class JobCard implements OnInit, OnDestroy{
-  isLoading        = false;
-  errorMessage     = '';
-  jobCards:         JobCardModel[]    = [];
-  grouped:          GroupedJobCard[]  = [];
-  filtered:         GroupedJobCard[]  = [];
-  activeFilter:     JobCardStatus | 'all' = 'all';
-  searchQuery       = '';
-  expandedReportNo  = '';
+
+
+ // ── Job Card State ──────────────────────────────────────────────────────────
+  isLoading       = false;
+  errorMessage    = '';
+  jobCards:        JobCardModel[]   = [];
+  grouped:         GroupedJobCard[] = [];
+  filtered:        GroupedJobCard[] = [];
+  activeFilter:    JobCardStatus | 'all' = 'all';
+  searchQuery      = '';
+  expandedReportNo = '';
   counts = { all: 0, active: 0, inactive: 0, completed: 0 };
+
+  // ── Drawer State ────────────────────────────────────────────────────────────
+  drawerOpen  = false;
+  activeRoute = '/analyst/job-card';
+  currentUser: any;
+  searchType  = 'reportNumber';
 
   private destroy$ = new Subject<void>();
 
@@ -46,10 +56,46 @@ export class JobCard implements OnInit, OnDestroy{
     private router: Router,
   ) {}
 
-  ngOnInit(): void    { this.loadJobCards(); }
-  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
+  // ─────────────────────────────────────────────────────────────────────────
+  // LIFECYCLE
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Load + Enrich ─────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    try {
+      const userStr = localStorage.getItem('userProfile') || localStorage.getItem('analystUser');
+      if (userStr) this.currentUser = JSON.parse(userStr);
+    } catch {}
+    this.loadJobCards();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DRAWER
+  // ─────────────────────────────────────────────────────────────────────────
+
+  toggleDrawer(): void { this.drawerOpen = !this.drawerOpen; }
+  closeDrawer():  void { this.drawerOpen = false; }
+
+  navigateTo(route: string): void {
+    this.activeRoute = route;
+    this.closeDrawer();
+    this.router.navigate([route]);
+  }
+
+  onSearchTypeChange(type: string): void { this.searchType = type; }
+
+  logout(): void {
+    ['analystToken', 'analystUser', 'token', 'userProfile'].forEach(k => localStorage.removeItem(k));
+    this.router.navigate(['/analyst/login']);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOAD & ENRICH
+  // ─────────────────────────────────────────────────────────────────────────
 
   loadJobCards(): void {
     const analystName = this.getAnalystName();
@@ -75,13 +121,13 @@ export class JobCard implements OnInit, OnDestroy{
           this.jobCards = res.data;
           console.log('[JobCard] Raw job cards:', this.jobCards);
 
-          // ── get unique reportNos and fetch each sample ──
-          const uniqueReportNos = [...new Set(this.jobCards.map(jc => jc.reportNo).filter(Boolean))];
-          console.log('[JobCard] Fetching samples for reports:', uniqueReportNos);
+          const uniqueReportNos = [
+            ...new Set(this.jobCards.map(jc => jc.reportNo).filter(Boolean))
+          ];
+          console.log('[JobCard] Fetching samples for:', uniqueReportNos);
 
           if (!uniqueReportNos.length) return of([]);
 
-          // fetch all samples in parallel
           const sampleRequests = uniqueReportNos.map(rn =>
             this.jobCardService.getSampleByReportNumber(rn).pipe(
               catchError(err => {
@@ -99,12 +145,10 @@ export class JobCard implements OnInit, OnDestroy{
           this.isLoading = false;
           if (!sampleResponses) return;
 
-          // ── build a reportNo → sample map ──
+          // Build reportNo → sample map
           const sampleMap = new Map<string, any>();
           (sampleResponses as any[]).forEach((res) => {
             if (!res) return;
-
-            // backend may return single object or array
             const raw = res.data;
             const samples: any[] = Array.isArray(raw)
               ? raw
@@ -113,7 +157,6 @@ export class JobCard implements OnInit, OnDestroy{
                 : raw
                   ? [raw]
                   : [];
-
             samples.forEach(s => {
               if (s?.reportNumber) {
                 sampleMap.set(s.reportNumber, s);
@@ -122,22 +165,31 @@ export class JobCard implements OnInit, OnDestroy{
             });
           });
 
-          // ── enrich each job card with sample fields ──
+          // Enrich job cards with sample fields
           this.jobCards = this.jobCards.map(jc => {
             const sample = sampleMap.get(jc.reportNo);
             if (sample) {
               return {
                 ...jc,
-                sampleDescription: jc.sampleDescription || sample.sampleDescription || sample.description || '—',
-                projectName:       jc.projectName       || sample.projectName        || '—',
-                labName:           jc.labName            || sample.labName            || 'EPAL Laboratory',
+                sampleNumber:      sample.sampleNumber      || '—',
+                sampleDescription: jc.sampleDescription     || sample.sampleDescription || sample.description || '—',
+                projectName:       jc.projectName           || sample.projectName       || '—',
+                labName:           jc.labName               || sample.labName           || 'EPA Labs Private Limited',
               };
             }
             return jc;
           });
 
           console.log('[JobCard] Enriched job cards:', this.jobCards);
+
           this.buildGrouped();
+
+          // Patch sampleNumber onto each group from the enriched job cards
+          this.grouped = this.grouped.map(g => ({
+            ...g,
+            sampleNumber: (this.jobCards.find(jc => jc.reportNo === g.reportNo) as any)?.sampleNumber || '—',
+          }));
+
           this.applyFilter();
         },
         error: (err) => {
@@ -148,7 +200,9 @@ export class JobCard implements OnInit, OnDestroy{
       });
   }
 
-  // ── Group by reportNo ─────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // GROUP BY REPORT NO
+  // ─────────────────────────────────────────────────────────────────────────
 
   private buildGrouped(): void {
     const map = new Map<string, GroupedJobCard>();
@@ -158,9 +212,10 @@ export class JobCard implements OnInit, OnDestroy{
       if (!map.has(key)) {
         map.set(key, {
           reportNo:          key,
+          sampleNumber:      '',
           sampleDescription: jc.sampleDescription || jc.paremeterType || '—',
           projectName:       jc.projectName        || '—',
-          labName:           jc.labName             || 'EPAL Laboratory',
+          labName:           jc.labName             || 'EPA Labs Private Limited ',
           status:            getJobCardStatus(jc),
           analystName:       jc.analystName,
           createdAt:         jc.createdAt,
@@ -182,32 +237,49 @@ export class JobCard implements OnInit, OnDestroy{
     console.log('[JobCard] Grouped:', this.grouped);
   }
 
-  // ── Filter ────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // FILTER & SEARCH
+  // ─────────────────────────────────────────────────────────────────────────
 
   applyFilter(): void {
     let list = this.grouped;
+
     if (this.activeFilter !== 'all') {
       list = list.filter(g => g.status === this.activeFilter);
     }
+
     const q = this.searchQuery.trim().toLowerCase();
     if (q) {
       list = list.filter(g =>
         g.reportNo.toLowerCase().includes(q)          ||
+        g.sampleNumber.toLowerCase().includes(q)      ||
         g.sampleDescription.toLowerCase().includes(q) ||
         g.projectName.toLowerCase().includes(q)       ||
         g.labName.toLowerCase().includes(q)
       );
     }
+
     this.filtered = list;
   }
 
   setFilter(f: JobCardStatus | 'all'): void { this.activeFilter = f; this.applyFilter(); }
   onSearch(): void { this.applyFilter(); }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // EXPAND / COLLAPSE
+  // ─────────────────────────────────────────────────────────────────────────
+
   toggleExpand(reportNo: string): void {
     this.expandedReportNo = this.expandedReportNo === reportNo ? '' : reportNo;
   }
-  isExpanded(reportNo: string): boolean { return this.expandedReportNo === reportNo; }
+
+  isExpanded(reportNo: string): boolean {
+    return this.expandedReportNo === reportNo;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // HELPERS
+  // ─────────────────────────────────────────────────────────────────────────
 
   getAnalystName(): string {
     try {
@@ -224,43 +296,69 @@ export class JobCard implements OnInit, OnDestroy{
     } catch { return ''; }
   }
 
+  statusLabel(s: JobCardStatus): string {
+    return ({ active: 'Active', completed: 'Completed', inactive: 'Inactive' } as Record<JobCardStatus, string>)[s];
+  }
+
+  statusIcon(s: JobCardStatus): string {
+    return ({ active: '🔬', completed: '✅', inactive: '⏸️' } as Record<JobCardStatus, string>)[s];
+  }
+
+  trackByReport(_: number, g: GroupedJobCard): string { return g.reportNo; }
+  trackById(_: number, jc: JobCardModel): number      { return jc.id; }
+
   goBack(): void { this.router.navigate(['/analyst/dashboard']); }
 
-printJobCard(g: GroupedJobCard): void {
-  const printWindow = window.open('', '_blank', 'width=800,height=1000');
-  if (!printWindow) { alert('Please allow popups to print.'); return; }
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRINT
+  // ─────────────────────────────────────────────────────────────────────────
 
-  const rows = g.parameters.map((p, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${p.parameterName || '—'}</td>
-      <td>${p.unit || '—'}</td>
-      <td class="${p.resultValue ? '' : ''}">${p.resultValue || ''}</td>
-      <td>${p.protocolUsed || '—'}</td>
-      <td class="${p.complies ? 'yes' : 'no'}">${p.complies ? '✓ Yes' : '✗ No'}</td>
-      <td>${p.remarks || '—'}</td>
-    </tr>`).join('');
+  printJobCard(g: GroupedJobCard): void {
+    const printWindow = window.open('', '_blank', 'width=800,height=1000');
+    if (!printWindow) { alert('Please allow popups to print.'); return; }
 
-  const first = g.parameters[0];
-  // ← logo from Angular public folder
-  const logoUrl = `${window.location.origin}/logo.png`;
+    const rows = g.parameters.map((p, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${p.parameterName || '—'}</td>
+        <td>${p.unit || '—'}</td>
+        <td class="${p.resultValue ? '' : ''}">${p.resultValue || ''}</td>
+        <td>${p.protocolUsed || '—'}</td>
+        <td>${p.remarks || '—'}</td>
+      </tr>`).join('');
 
-  const html = `<!DOCTYPE html>
+    const first    = g.parameters[0];
+    const logoUrl  = `${window.location.origin}/logo.png`;
+    const printDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const printTime = new Date().toLocaleString('en-IN');
+    const createdDate = new Date(g.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>Job Card — ${g.reportNo}</title>
+  <title>Job Card — ${g.sampleNumber || g.reportNo}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --teal:#215E61; --teal-lt:#e8f4f4; --ink:#1a2e30; --muted:#6b7280;
-      --border:#d1d5db; --yes:#065f46; --yes-bg:#d1fae5;
-      --no:#991b1b;  --no-bg:#fee2e2;  --warn:#92400e;
-    }
-    body { font-family:'DM Sans',sans-serif; color:var(--ink); background:#fff; }
 
-    /* ── Letterhead ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:    #215E61;
+      --teal-lt: #e8f4f4;
+      --ink:     #1a2e30;
+      --muted:   #6b7280;
+      --border:  #d1d5db;
+      --yes:     #065f46;
+      --yes-bg:  #d1fae5;
+      --no:      #991b1b;
+      --no-bg:   #fee2e2;
+      --warn:    #92400e;
+    }
+
+    body { font-family: 'DM Sans', sans-serif; color: var(--ink); background: #fff; }
+
+    /* ── Letterhead ─────────────────────────────────────────────── */
     .letterhead {
       background: var(--teal);
       color: #fff;
@@ -269,14 +367,14 @@ printJobCard(g: GroupedJobCard): void {
       justify-content: space-between;
       align-items: center;
     }
-    .lh-left     { display:flex; align-items:center; gap:14px; }
-    .lh-logo     { width:54px; height:54px; object-fit:contain; background:#fff; border-radius:10px; padding:4px; flex-shrink:0; }
-    .lh-brand    { font-size:20px; font-weight:700; letter-spacing:-0.3px; }
-    .lh-sub      { font-size:10px; opacity:.7; margin-top:3px; letter-spacing:.8px; text-transform:uppercase; }
-    .lh-right    { text-align:right; font-size:11px; opacity:.85; line-height:1.9; }
-    .lh-report   { font-family:'DM Mono',monospace; font-size:16px; font-weight:600; letter-spacing:1px; }
+    .lh-left    { display: flex; align-items: center; gap: 14px; }
+    .lh-logo    { width: 54px; height: 54px; object-fit: contain; background: #fff; border-radius: 10px; padding: 4px; flex-shrink: 0; }
+    .lh-brand   { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .lh-sub     { font-size: 10px; opacity: .7; margin-top: 3px; letter-spacing: .8px; text-transform: uppercase; }
+    .lh-right   { text-align: right; font-size: 11px; opacity: .85; line-height: 1.9; }
+    .lh-sample  { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 600; letter-spacing: 1px; }
 
-    /* ── Title strip ── */
+    /* ── Title Strip ─────────────────────────────────────────────── */
     .title-strip {
       background: var(--teal-lt);
       border-bottom: 2px solid var(--teal);
@@ -285,47 +383,72 @@ printJobCard(g: GroupedJobCard): void {
       align-items: center;
       gap: 10px;
     }
-    .title-strip h1 { font-size:15px; font-weight:700; color:var(--teal); }
-    .badge { padding:2px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
-    .badge-active    { background:#d1fae5; color:#065f46; }
-    .badge-inactive  { background:#fef3c7; color:#92400e; }
-    .badge-completed { background:#dbeafe; color:#1e40af; }
+    .title-strip h1 { font-size: 15px; font-weight: 700; color: var(--teal); }
 
-    /* ── Meta grid ── */
+    .badge { padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .badge-active    { background: #d1fae5; color: #065f46; }
+    .badge-inactive  { background: #fef3c7; color: #92400e; }
+    .badge-completed { background: #dbeafe; color: #1e40af; }
+
+    /* ── Meta Grid ───────────────────────────────────────────────── */
     .meta-section { padding: 18px 32px 12px; }
-    .meta-grid    { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
-    .meta-item label { font-size:9px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:700; display:block; margin-bottom:3px; }
-    .meta-item span  { font-size:12px; font-weight:600; color:var(--ink); }
-
-    /* ── Checks ribbon ── */
-    .checks-ribbon { margin: 0 32px 16px; display:flex; gap:8px; flex-wrap:wrap; }
-    .check {
-      display:flex; align-items:center; gap:5px;
-      padding:5px 12px; border-radius:6px;
-      font-size:11px; font-weight:600; border:1.5px solid transparent;
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
     }
-    .check-yes { background:var(--yes-bg); color:var(--yes); border-color:#6ee7b7; }
-    .check-no  { background:var(--no-bg);  color:var(--no);  border-color:#fca5a5; }
+    .meta-item label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      font-weight: 700;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .meta-item span { font-size: 12px; font-weight: 600; color: var(--ink); }
 
-    /* ── Table ── */
+    /* ── Checks Ribbon ───────────────────────────────────────────── */
+    .checks-ribbon {
+      margin: 0 32px 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1.5px solid transparent;
+    }
+    .check-yes { background: var(--yes-bg); color: var(--yes); border-color: #6ee7b7; }
+    .check-no  { background: var(--no-bg);  color: var(--no);  border-color: #fca5a5; }
+
+    /* ── Parameters Table ────────────────────────────────────────── */
     .table-section { padding: 0 32px 24px; }
     .table-section h2 {
-      font-size:11px; font-weight:700; text-transform:uppercase;
-      letter-spacing:.8px; color:var(--teal);
-      margin-bottom:10px; padding-bottom:7px;
-      border-bottom:2px solid var(--teal-lt);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--teal);
+      margin-bottom: 10px;
+      padding-bottom: 7px;
+      border-bottom: 2px solid var(--teal-lt);
     }
-    table             { width:100%; border-collapse:collapse; font-size:11px; }
-    thead tr          { background:var(--teal); color:#fff; }
-    thead th          { padding:8px 8px; text-align:left; font-weight:600; font-size:10px; white-space:nowrap; }
-    tbody tr          { border-bottom:1px solid var(--border); }
-    tbody tr:nth-child(even) { background:#f9fafb; }
-    td                { padding:7px 8px; vertical-align:middle; }
-    td.pending        { color:var(--warn); font-style:italic; }
-    td.yes            { color:var(--yes); font-weight:600; }
-    td.no             { color:var(--no);  font-weight:600; }
+    table               { width: 100%; border-collapse: collapse; font-size: 11px; }
+    thead tr            { background: var(--teal); color: #fff; }
+    thead th            { padding: 8px; text-align: left; font-weight: 600; font-size: 10px; white-space: nowrap; }
+    tbody tr            { border-bottom: 1px solid var(--border); }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    td                  { padding: 7px 8px; vertical-align: middle; }
+    td.pending          { color: var(--warn); font-style: italic; }
 
-    /* ── Footer ── */
+    /* ── Footer ──────────────────────────────────────────────────── */
     .print-footer {
       margin: 0 32px;
       padding: 14px 0;
@@ -336,70 +459,68 @@ printJobCard(g: GroupedJobCard): void {
       font-size: 9px;
       color: var(--muted);
     }
-    .sig-block  { text-align:right; }
-    .sig-line   { border-top:1px solid var(--ink); width:140px; margin-left:auto; margin-bottom:4px; }
-    .sig-label  { font-size:9px; color:var(--muted); }
+    .sig-block { text-align: right; }
+    .sig-line  { border-top: 1px solid var(--ink); width: 140px; margin-left: auto; margin-bottom: 4px; }
+    .sig-label { font-size: 9px; color: var(--muted); }
 
-    /* ── Portrait A4 print ── */
+    /* ── Print Media ─────────────────────────────────────────────── */
     @media print {
       @page { size: A4 portrait; margin: 8mm 10mm; }
-      body  { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      body  { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Letterhead -->
+  <!-- ── Letterhead ── -->
   <div class="letterhead">
     <div class="lh-left">
-      <img class="lh-logo" src="${logoUrl}" alt="Lab Logo"
-           onerror="this.style.display='none'" />
+      <img class="lh-logo" src="${logoUrl}" alt="Lab Logo" onerror="this.style.display='none'" />
       <div>
-        <div class="lh-brand">EPAL Laboratory</div>
+        <div class="lh-brand">EPA Labs Private Limited</div>
         <div class="lh-sub">Analytical Testing &amp; Quality Assurance</div>
       </div>
     </div>
     <div class="lh-right">
-      <div class="lh-report">${g.reportNo}</div>
+      <div class="lh-sample">${g.sampleNumber || '—'}</div>
       <div>Job Card</div>
-      <div>Printed: ${new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</div>
+      <div>Printed: ${printDate}</div>
     </div>
   </div>
 
-  <!-- Title strip -->
+  <!-- ── Title Strip ── -->
   <div class="title-strip">
     <h1>Analysis Job Card</h1>
     <span class="badge badge-${g.status}">${this.statusLabel(g.status)}</span>
   </div>
 
-  <!-- Meta -->
+  <!-- ── Meta Grid ── -->
   <div class="meta-section">
     <div class="meta-grid">
-      <div class="meta-item"><label>Report No.</label><span>${g.reportNo}</span></div>
+      <div class="meta-item"><label>Sample No.</label><span>${g.sampleNumber || '—'}</span></div>
       <div class="meta-item"><label>Sample Description</label><span>${g.sampleDescription}</span></div>
       <div class="meta-item"><label>Project</label><span>${g.projectName}</span></div>
       <div class="meta-item"><label>Lab</label><span>${g.labName}</span></div>
       <div class="meta-item"><label>Analyst</label><span>${g.analystName}</span></div>
       <div class="meta-item"><label>Parameters</label><span>${g.parameters.length}</span></div>
-      <div class="meta-item"><label>Created</label><span>${new Date(g.createdAt).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</span></div>
-      <div class="meta-item"><label>NABL</label><span>${first?.isNabl ? '✓ NABL Accredited' : 'Non-NABL'}</span></div>
+      <div class="meta-item"><label>Created</label><span>${createdDate}</span></div>
     </div>
   </div>
 
-  <!-- Checks ribbon -->
-  <div class="checks-ribbon">
+  <!-- ── Checks Ribbon ── 
+ <!--   <div class="checks-ribbon">
     <span class="check ${first?.isApproved ? 'check-yes' : 'check-no'}">
-      ${first?.isApproved ? '✓' : '✗'} Approved
-    </span>
+    //   ${first?.isApproved ? '✓' : '✗'} Approved
+   </span>
     <span class="check ${first?.isTechanicianChecked ? 'check-yes' : 'check-no'}">
       ${first?.isTechanicianChecked ? '✓' : '✗'} Technician Checked
     </span>
     <span class="check ${first?.isQualityChecked ? 'check-yes' : 'check-no'}">
       ${first?.isQualityChecked ? '✓' : '✗'} Quality Checked
     </span>
-  </div>
+  </div> -->
 
-  <!-- Parameters table -->
+  <!-- ── Parameters Table ── -->
   <div class="table-section">
     <h2>Test Parameters</h2>
     <table>
@@ -410,7 +531,6 @@ printJobCard(g: GroupedJobCard): void {
           <th>Unit</th>
           <th>Result Value</th>
           <th>Protocol</th>
-          <th>Complies</th>
           <th>Remarks</th>
         </tr>
       </thead>
@@ -418,11 +538,11 @@ printJobCard(g: GroupedJobCard): void {
     </table>
   </div>
 
-  <!-- Footer -->
+  <!-- ── Footer ── -->
   <div class="print-footer">
     <div>
-      <div>Report No: <strong>${g.reportNo}</strong></div>
-      <div>Generated by EPAL Lab Portal · ${new Date().toLocaleString('en-IN')}</div>
+      <div>Sample No: <strong>${g.sampleNumber || '—'}</strong></div>
+      <div>Generated by EPAL Lab Portal · ${printTime}</div>
     </div>
     <div class="sig-block">
       <div class="sig-line"></div>
@@ -434,32 +554,7 @@ printJobCard(g: GroupedJobCard): void {
 </body>
 </html>`;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
-}
-
-  statusLabel(s: JobCardStatus): string {
-    return ({active:'Active', completed:'Completed', inactive:'Inactive'} as Record<JobCardStatus,string>)[s];
+    printWindow.document.write(html);
+    printWindow.document.close();
   }
-  statusIcon(s: JobCardStatus): string {
-    return ({active:'🔬', completed:'✅', inactive:'⏸️'} as Record<JobCardStatus,string>)[s];
-  }
-
-  trackByReport(_: number, g: GroupedJobCard): string { return g.reportNo; }
-  trackById(_: number, jc: JobCardModel): number      { return jc.id; }
-
-  
-  // ── Drawer state ──────────────────────────────────────────────────────────
-drawerOpen = false;
-activeRoute = 'dashboard';
-
-toggleDrawer(): void  { this.drawerOpen = !this.drawerOpen; }
-openDrawer(): void    { this.drawerOpen = true; }
-closeDrawer(): void   { this.drawerOpen = false; }
-
-navigateTo(route: string): void {
-  this.activeRoute = route;
-  this.closeDrawer();
-  this.router.navigate([route]);
-}
 }
