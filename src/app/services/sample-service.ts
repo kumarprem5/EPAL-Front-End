@@ -59,11 +59,18 @@ export interface ApiResponse<T> {
   status: 'SUCCESS' | 'ERROR';
 }
 
-// ── SampleResultParameterDropDown — template/source entity from backend ───────
+// ── Analyst ────────────────────────────────────────────────────────────────
+export interface Analyst {
+  id?:  number;
+  analystName: string;
+  [key: string]: any;
+}
+
+// ── SampleResultParameterDropDown — template/source entity from backend ────
 export interface SampleResult {
   id?: number;
   unit: string;
-  name: string;
+  name: string;       // ✅ restored — parameter name from dropdown template
   result: string;
   reportNumber?: string;
   sampleDescription: string;
@@ -76,20 +83,20 @@ export interface SampleResult {
   updatedAt?: string;
 }
 
-// ── TestParameterResult — actual saved result row (TestParameterResultRequest) ─
-// Fields map directly to TestParameterResultRequest on the backend.
-// Pre-filled from SampleResultParameterDropDown templates; user edits resultValue etc.
+// ── TestParameterResult — actual saved result row ──────────────────────────
+// Maps directly to SampleResultParamter entity & TestParameterResultRequest.
 export interface TestParameterResult {
   id?:                number;
   parameterName:      string;    // ← from SampleResult.name
   unit:               string;    // ← from SampleResult.unit
-  resultValue:        string;    // user fills this
-  detectionLimit:     string;    // user fills this
+  resultValue:        string;    // user fills
+  detectionLimit:     string;    // user fills
   specificationLimit: string;    // ← from SampleResult.standarded
   protocolUsed:       string;    // ← from SampleResult.protocal
   complies:           boolean;   // checkbox
-  remarks:            string;    // user fills this
+  remarks:            string;    // user fills
   reportNo:           string;    // stamped on Save All
+  analystName?:       string;    // ✅ NEW — assigned analyst for job card
 }
 
 
@@ -138,7 +145,17 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
     return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/get/sample-descriptions`, this.getHeaders());
   }
 
-  // ── GENERAL INFO DROPDOWN TEMPLATES ──────────────────────────────────────
+  // ── ANALYST ───────────────────────────────────────────────────────────────
+  // GET /get/all/analyst → RestApiResponse with list of analysts
+
+  getAllAnalysts(): Observable<ApiResponse<Analyst[]>> {
+    return this.http.get<ApiResponse<Analyst[]>>(
+      `${this.baseUrl}/get/all/analyst`,
+      this.getHeaders()
+    );
+  }
+
+  // ── GENERAL INFO DROPDOWN TEMPLATES ───────────────────────────────────────
 
   getGeneralInfoDropDownsBySampleDescription(sampleDescription: string): Observable<ApiResponse<TestParameter[]>> {
     return this.http.post<ApiResponse<TestParameter[]>>(
@@ -148,9 +165,7 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
     );
   }
 
-  // ── RESULT DROPDOWN TEMPLATES ─────────────────────────────────────────────
-  // POST /sample-result/find-by-description → raw List<SampleResultParameterDropDown>
-  // Wrapped into ApiResponse shape for consistent component handling.
+  // ── RESULT DROPDOWN TEMPLATES ──────────────────────────────────────────────
 
   getResultDropDownsBySampleDescription(sampleDescription: string): Observable<ApiResponse<SampleResult[]>> {
     return this.http.post<any>(
@@ -200,10 +215,7 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
     );
   }
 
-  // ── TEST PARAMETER RESULT CRUD ────────────────────────────────────────────
-  // POST /create/result    → creates TestParameterResult row (RestApiResponse)
-  // PUT  /update/result    → updates TestParameterResult row (RestApiResponse)
-  // GET  /result/by-report-no?reportNo=XX → list of saved results for a report
+  // ── TEST PARAMETER RESULT CRUD ─────────────────────────────────────────────
 
   createTestParameterResult(data: TestParameterResult): Observable<ApiResponse<TestParameterResult>> {
     return this.http.post<ApiResponse<TestParameterResult>>(
@@ -224,10 +236,7 @@ private baseUrl = 'http://localhost:8080/api/collector/samples';
   getTestParameterResultsByReportNo(reportNo: string): Observable<ApiResponse<TestParameterResult[]>> {
     return this.http.get<ApiResponse<TestParameterResult[]>>(
       `${this.baseUrl}/result/by-report-no`,
-      {
-        headers: this.getHeaders().headers,
-        params: { reportNo },
-      }
+      { headers: this.getHeaders().headers, params: { reportNo } }
     );
   }
 

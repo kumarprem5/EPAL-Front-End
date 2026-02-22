@@ -19,6 +19,7 @@ import { QualityLogin } from './components/quality-login/quality-login';
 import { QualityDashboard } from './quality/quality-dashboard/quality-dashboard';
 import { QualityGeneralInfo } from './quality/quality-general-info/quality-general-info';
 import { QualitySampleResult } from './quality/quality-sample-result/quality-sample-result';
+import { JobCard } from './analyst/job-card/job-card';
 
 export const routes: Routes = [
   { path: 'home', component: HomePage },
@@ -31,21 +32,13 @@ export const routes: Routes = [
   { path: 'samples/all', component: AllSamples },
   { path: 'analyst/login', component: AnalystLogin },
   // { path: 'analyst/login', component: AnalystLogin },
-  {
-    path: 'analyst/dashboard',
-    component: AnalystDashboard
+  {path: 'analyst/dashboard',component: AnalystDashboard},
+     {path: 'analyst/job-card',component: JobCard},
 
-  },
-
-  {
-    path: 'edit-general-info',
-    component: AnalystGeneralInfoComponent
-  },
+  { path: 'edit-general-info',component: AnalystGeneralInfoComponent},
 
   {
-    path: 'edit-sample-result',
-    component: AnalystSampleResultComponent
-  },
+    path: 'edit-sample-result',component: AnalystSampleResultComponent},
   { path: 'techanician/login', component: TechnicianLogin },
   { path: 'techanician/dashboard', component: TechnicianDashboard },
   { path: 'techanician/general-info', component: TechanicianGeneralInfo },
@@ -55,5 +48,6 @@ export const routes: Routes = [
   { path: 'quality/dashboard', component: QualityDashboard },
   { path: 'quality/general-info', component: QualityGeneralInfo },
   { path: 'quality/sample-result', component: QualitySampleResult },
+  
 ];
 

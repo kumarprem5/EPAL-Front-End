@@ -1,0 +1,176 @@
+<!-- job-card.component.html -->
+<div class="jc-page">
+
+  
+  <!-- ── Page Header ──────────────────────────────────────────────────────── -->
+  <div class="jc-page-header">
+    <div class="jc-header-left">
+      <div class="jc-title-block">
+        <span class="jc-title-icon">🧾</span>
+        <div>
+          <h1 class="jc-title">Job Cards</h1>
+          <p class="jc-subtitle">Assigned analysis tasks for {{ getAnalystName() || 'you' }}</p>
+        </div>
+      </div>
+    </div>
+    <button class="jc-refresh-btn" (click)="loadJobCards()" [disabled]="isLoading">
+      <span class="refresh-icon" [class.spinning]="isLoading">↻</span>
+      Refresh
+    </button>
+  </div>
+
+  <!-- ── Stat Chips ────────────────────────────────────────────────────────── -->
+  <div class="jc-stat-chips">
+    <button class="chip chip-all"       [class.active]="activeFilter==='all'"       (click)="setFilter('all')">
+      <span class="chip-dot all-dot"></span> All <span class="chip-num">{{ counts.all }}</span>
+    </button>
+    <button class="chip chip-active"    [class.active]="activeFilter==='active'"    (click)="setFilter('active')">
+      <span class="chip-dot active-dot"></span> Active <span class="chip-num">{{ counts.active }}</span>
+    </button>
+    <button class="chip chip-inactive"  [class.active]="activeFilter==='inactive'"  (click)="setFilter('inactive')">
+      <span class="chip-dot inactive-dot"></span> Inactive <span class="chip-num">{{ counts.inactive }}</span>
+    </button>
+    <button class="chip chip-completed" [class.active]="activeFilter==='completed'" (click)="setFilter('completed')">
+      <span class="chip-dot completed-dot"></span> Completed <span class="chip-num">{{ counts.completed }}</span>
+    </button>
+  </div>
+  <!-- ── Search ────────────────────────────────────────────────────────────── -->
+  <div class="jc-search-bar">
+    <span class="search-icon-prefix">🔍</span>
+    <input class="jc-search-input"
+           type="text"
+           [(ngModel)]="searchQuery"
+           (input)="onSearch()"
+           placeholder="Search by report no., description, project or lab name…" />
+  </div>
+
+  <!-- ── Loading ───────────────────────────────────────────────────────────── -->
+  <div class="jc-loading" *ngIf="isLoading">
+    <div class="jc-spinner"></div>
+    <p>Loading job cards…</p>
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────────────────── -->
+  <div class="jc-error" *ngIf="!isLoading && errorMessage">
+    <span>⚠️</span> {{ errorMessage }}
+    <button (click)="loadJobCards()">Retry</button>
+  </div>
+
+  <!-- ── Empty ─────────────────────────────────────────────────────────────── -->
+  <div class="jc-empty" *ngIf="!isLoading && !errorMessage && filtered.length === 0">
+    <div class="jc-empty-icon">📋</div>
+    <h3>No Job Cards Found</h3>
+    <p>{{ activeFilter !== 'all' ? 'Try switching the filter above.' : 'No job cards are assigned to you yet.' }}</p>
+  </div>
+
+  <!-- ── Cards List ────────────────────────────────────────────────────────── -->
+  <div class="jc-list" *ngIf="!isLoading && filtered.length > 0">
+
+    <div class="jc-card"
+         *ngFor="let g of filtered; trackBy: trackByReport"
+         [class.jc-active]="g.status === 'active'"
+         [class.jc-inactive]="g.status === 'inactive'"
+         [class.jc-completed]="g.status === 'completed'">
+
+      <!-- ── Card Header ──────────────────────────────────────────────────── -->
+      <div class="jc-card-header" (click)="toggleExpand(g.reportNo)">
+
+        <!-- Status pill -->
+        <div class="jc-status-pill" [class]="'pill-' + g.status">
+          {{ statusIcon(g.status) }} {{ statusLabel(g.status) }}
+        </div>
+
+        <!-- Core info -->
+        <div class="jc-card-meta">
+          <div class="jc-report-no">{{ g.reportNo }}</div>
+          <div class="jc-meta-row">
+            <span class="meta-chip">🧪 {{ g.sampleDescription }}</span>
+            <span class="meta-chip">🏭 {{ g.labName }}</span>
+            <span class="meta-chip">📁 {{ g.projectName }}</span>
+            <span class="meta-chip">👤 {{ g.analystName }}</span>
+          </div>
+          <div class="jc-param-count">
+            {{ g.parameters.length }} parameter{{ g.parameters.length !== 1 ? 's' : '' }}
+            · {{ g.createdAt | date:'dd MMM yyyy' }}
+          </div>
+        </div>
+
+         <button class="jc-print-btn"
+          (click)="$event.stopPropagation(); printJobCard(g)"
+          title="Print Job Card">
+    🖨️ Print
+  </button>
+
+        <!-- Expand toggle -->
+        <div class="jc-expand-btn" [class.expanded]="isExpanded(g.reportNo)">▾</div>
+
+      </div><!-- /.jc-card-header -->
+
+      <!-- ── Parameters Table (expanded) ───────────────────────────────────── -->
+      <div class="jc-param-section" *ngIf="isExpanded(g.reportNo)">
+
+        <!-- check-mark ribbon -->
+        <div class="jc-checks-ribbon">
+          <span class="check-badge" [class.check-yes]="g.parameters[0]?.isApproved"
+                                    [class.check-no]="!g.parameters[0]?.isApproved">
+            {{ g.parameters[0]?.isApproved ? '✓' : '✗' }} Approved
+          </span>
+          <span class="check-badge" [class.check-yes]="g.parameters[0]?.isTechanicianChecked"
+                                    [class.check-no]="!g.parameters[0]?.isTechanicianChecked">
+            {{ g.parameters[0]?.isTechanicianChecked ? '✓' : '✗' }} Technician
+          </span>
+          <span class="check-badge" [class.check-yes]="g.parameters[0]?.isQualityChecked"
+                                    [class.check-no]="!g.parameters[0]?.isQualityChecked">
+            {{ g.parameters[0]?.isQualityChecked ? '✓' : '✗' }} Quality
+          </span>
+          <span class="check-badge" [class.check-yes]="g.parameters[0]?.isNabl">
+            {{ g.parameters[0]?.isNabl ? '✓ NABL' : 'Non-NABL' }}
+          </span>
+        </div>
+
+        <!-- table -->
+        <div class="jc-table-wrap">
+          <table class="jc-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Parameter</th>
+                <th>Unit</th>
+                <th>Result Value</th>
+                <th>Detection Limit</th>
+                <th>Specification</th>
+                <th>Protocol</th>
+                <th>Complies</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of g.parameters; let i = index; trackBy: trackById">
+                <td class="td-sno">{{ i + 1 }}</td>
+                <td class="td-param">{{ p.parameterName || '—' }}</td>
+                <td class="td-unit">{{ p.unit || '—' }}</td>
+                <td class="td-result">
+                  <span class="result-pill" [class.result-empty]="!p.resultValue">
+                    {{ p.resultValue || 'Pending' }}
+                  </span>
+                </td>
+                <td>{{ p.detectionLimit || '—' }}</td>
+                <td>{{ p.specificationLimit || '—' }}</td>
+                <td class="td-protocol">{{ p.protocolUsed || '—' }}</td>
+                <td class="td-complies">
+                  <span class="complies-badge" [class.complies-yes]="p.complies" [class.complies-no]="!p.complies">
+                    {{ p.complies ? '✓ Yes' : '✗ No' }}
+                  </span>
+                </td>
+                <td class="td-remarks">{{ p.remarks || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div><!-- /.jc-table-wrap -->
+
+      </div><!-- /.jc-param-section -->
+
+    </div><!-- /.jc-card -->
+  </div><!-- /.jc-list -->
+
+</div><!-- /.jc-page -->
